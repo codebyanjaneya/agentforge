@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+groq
+redis
+sqlalchemy
+psycopg2-binary
+python-dotenv
+websockets
+langchain
+langgraph
