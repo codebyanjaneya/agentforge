@@ -11,7 +11,8 @@ from sqlalchemy.orm import (
 
 load_dotenv()
 
-DATABASE_URL = "postgresql://postgres:agentforge123@127.0.0.1:5433/agentforge"
+import os
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
