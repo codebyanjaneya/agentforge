@@ -1,12 +1,14 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from autonomous import AutonomousExecutor
 from improvement.self_improver import SelfImprover
+from memory.long_term import LongTermMemory
 from orchestrator import AgentOrchestrator
 from tasks.scheduler import TaskScheduler
+from voice_handler import build_incoming_response, process_recording
 
 load_dotenv()
 
@@ -24,11 +26,13 @@ orchestrator = AgentOrchestrator()
 executor = AutonomousExecutor(orchestrator)
 scheduler = TaskScheduler()
 improver = SelfImprover()
+long_term = LongTermMemory()
 
 
 class AutonomousRequest(BaseModel):
     agent: str
     task: str
+    user_email: str
 
 
 class ScheduleRequest(BaseModel):
@@ -44,7 +48,9 @@ async def health():
 
 @app.post("/autonomous/run")
 async def autonomous_run(payload: AutonomousRequest):
-    return await executor.execute(payload.agent, payload.task)
+    return await executor.execute(
+        payload.agent, payload.task, payload.user_email
+    )
 
 
 @app.post("/tasks/schedule")
@@ -75,6 +81,28 @@ async def get_improvement(agent_name: str):
     return improver.get_improvements(agent_name)
 
 
+@app.get("/history/{user_email}")
+async def get_history(user_email: str):
+    """Return all stored conversations for a user, newest first."""
+    return long_term.get_history(user_email)
+
+
+@app.post("/voice/incoming")
+async def voice_incoming():
+    return Response(
+        content=build_incoming_response(),
+        media_type="application/xml",
+    )
+
+
+@app.post("/voice/process")
+async def voice_process(request: Request):
+    form = await request.form()
+    recording_url = form.get("RecordingUrl", "")
+    twiml = await process_recording(recording_url, orchestrator)
+    return Response(content=twiml, media_type="application/xml")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -83,6 +111,16 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             agent = data.get("agent")
             task = data.get("task")
+            user_email = data.get("user_email")
+
+            if not user_email:
+                await websocket.send_json(
+                    {
+                        "error": "Missing 'user_email'. Please log in before "
+                        "sending tasks."
+                    }
+                )
+                continue
 
             if not agent or not task:
                 await websocket.send_json(
@@ -92,7 +130,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
             try:
                 if agent == "ceo":
-                    result = await orchestrator.run_with_delegation(agent, task)
+                    result = await orchestrator.run_with_delegation(
+                        agent, task, user_email
+                    )
                     await websocket.send_json(
                         {
                             "agent": agent,
@@ -103,7 +143,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         }
                     )
                 else:
-                    result = await orchestrator.run_agent(agent, task)
+                    result = await orchestrator.run_agent(
+                        agent, task, user_email
+                    )
                     await websocket.send_json({"agent": agent, "result": result})
             except ValueError as exc:
                 await websocket.send_json({"agent": agent, "error": str(exc)})

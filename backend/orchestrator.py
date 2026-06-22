@@ -21,23 +21,27 @@ class AgentOrchestrator:
             "hiring": hiring.run,
         }
 
-    async def run_agent(self, agent_name: str, task: str) -> str:
+    async def run_agent(
+        self, agent_name: str, task: str, user_email: str | None = None
+    ) -> str:
         agent = self._agents.get(agent_name)
         if agent is None:
             raise ValueError(
                 f"Unknown agent '{agent_name}'. "
                 f"Valid options: {', '.join(self._agents)}"
             )
-        return await agent(task)
+        return await agent(task, user_email)
 
-    async def run_with_delegation(self, agent_name: str, task: str) -> dict:
-        full_response = await self.run_agent(agent_name, task)
+    async def run_with_delegation(
+        self, agent_name: str, task: str, user_email: str | None = None
+    ) -> dict:
+        full_response = await self.run_agent(agent_name, task, user_email)
 
         delegations = []
         for sub_agent, subtask in self._extract_delegations(
             full_response, exclude=agent_name
         ):
-            response = await self.run_agent(sub_agent, subtask)
+            response = await self.run_agent(sub_agent, subtask, user_email)
             delegations.append(
                 {"agent": sub_agent, "task": subtask, "response": response}
             )

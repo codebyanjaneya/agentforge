@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ThemeToggle } from "../theme-toggle";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://65-0-30-8.sslip.io";
 
 const AGENTS = [
   { key: "ceo", label: "CEO", icon: "🧠" },
@@ -16,11 +17,11 @@ const AGENTS = [
 ] as const;
 
 const ACTION_META: Record<string, { icon: string; color: string }> = {
-  email_draft: { icon: "✉️", color: "text-blue-400 border-blue-500/30" },
-  report_generated: { icon: "📄", color: "text-emerald-400 border-emerald-500/30" },
-  strategy_created: { icon: "🎯", color: "text-amber-400 border-amber-500/30" },
-  leads_found: { icon: "🔍", color: "text-purple-400 border-purple-500/30" },
-  analysis_done: { icon: "📈", color: "text-orange-400 border-orange-500/30" },
+  email_draft: { icon: "✉️", color: "text-online border-online/30" },
+  report_generated: { icon: "📄", color: "text-accent-soft border-accent/30" },
+  strategy_created: { icon: "🎯", color: "text-online border-online/30" },
+  leads_found: { icon: "🔍", color: "text-accent-soft border-accent/30" },
+  analysis_done: { icon: "📈", color: "text-online border-online/30" },
 };
 
 interface ActionItem {
@@ -121,33 +122,41 @@ export default function AutonomousPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-gray-950 px-4 py-10 sm:px-8">
+    <main className="min-h-screen w-full px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-white">
+            <span className="mono text-[11px] uppercase tracking-[0.3em] text-accent">
+              Execution Engine
+            </span>
+            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">
               Autonomous Execution
             </h1>
-            <p className="mt-1 text-gray-400">
-              Run agents and let them take concrete actions
+            <p className="mt-2 text-sm text-muted">
+              Run agents and let them take concrete actions.
             </p>
           </div>
-          <Link
-            href="/"
-            className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800"
-          >
-            ← Back to Agents
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
+            <Link
+              href="/"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
+            >
+              ← Back to Agents
+            </Link>
+          </div>
         </header>
 
-        <section className="mb-6 rounded-2xl border border-gray-800 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
-          <h2 className="mb-4 text-lg font-semibold text-white">Run a Task</h2>
+        <section className="glass glass-hover mb-6 p-6">
+          <h2 className="mb-4 font-display text-lg font-semibold text-ink">
+            Run a Task
+          </h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2 sm:flex-row">
               <select
                 value={agent}
                 onChange={(e) => setAgent(e.target.value)}
-                className="rounded-lg border border-gray-700 bg-gray-950/80 px-3 py-2 text-sm text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="rounded-xl border border-hairline bg-field px-3 py-2 text-sm text-ink outline-none transition focus:border-accent/50 focus:ring-2 focus:ring-accent/30"
               >
                 {AGENTS.map((a) => (
                   <option key={a.key} value={a.key}>
@@ -158,20 +167,20 @@ export default function AutonomousPage() {
               <textarea
                 value={task}
                 onChange={(e) => setTask(e.target.value)}
-                placeholder="Describe the task to execute autonomously..."
+                placeholder="Describe the task to execute autonomously…"
                 rows={2}
-                className="flex-1 resize-none rounded-lg border border-gray-700 bg-gray-950/80 p-3 text-sm text-gray-100 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="flex-1 resize-none rounded-xl border border-hairline bg-field p-3 text-sm text-ink placeholder-muted/70 outline-none transition focus:border-accent/50 focus:ring-2 focus:ring-accent/30"
               />
             </div>
             <button
               onClick={execute}
               disabled={running || !task.trim()}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               {running ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Executing...
+                  Executing…
                 </>
               ) : (
                 "Execute"
@@ -181,24 +190,26 @@ export default function AutonomousPage() {
         </section>
 
         {error && (
-          <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <p className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
             {error}
           </p>
         )}
 
         {result && (
-          <section className="mb-6 rounded-2xl border border-gray-800 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
+          <section className="glass mb-6 p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Response</h2>
-              <span className="text-xs text-gray-500">
+              <h2 className="font-display text-lg font-semibold text-ink">
+                Response
+              </h2>
+              <span className="mono text-[11px] uppercase tracking-wider text-muted">
                 {new Date(result.executed_at).toLocaleString()}
               </span>
             </div>
-            <p className="mb-6 whitespace-pre-wrap text-sm text-gray-200">
+            <p className="mb-6 whitespace-pre-wrap text-sm leading-relaxed text-ink/90">
               {result.response}
             </p>
 
-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
+            <h3 className="mono mb-3 text-[10px] uppercase tracking-[0.2em] text-muted">
               Actions Taken
             </h3>
             <div className="flex flex-col gap-3">
@@ -206,12 +217,12 @@ export default function AutonomousPage() {
                 const meta =
                   ACTION_META[action.action_type] ?? {
                     icon: "⚙️",
-                    color: "text-gray-300 border-gray-700",
+                    color: "text-muted border-hairline",
                   };
                 return (
                   <div
                     key={`${action.action_type}-${index}`}
-                    className={`flex items-start justify-between gap-3 rounded-lg border bg-gray-950/60 p-3 ${meta.color}`}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-hairline bg-panel p-3"
                   >
                     <div className="flex items-start gap-3">
                       <span className="text-xl">{meta.icon}</span>
@@ -221,13 +232,13 @@ export default function AutonomousPage() {
                         >
                           {action.action_type.replace(/_/g, " ")}
                         </span>
-                        <p className="mt-1 text-sm text-gray-200">
+                        <p className="mt-1 text-sm text-ink/90">
                           {action.description}
                         </p>
                       </div>
                     </div>
-                    <span className="flex-shrink-0 text-xs font-medium text-green-400">
-                      ✓ Completed
+                    <span className="mono flex-shrink-0 text-[11px] font-medium text-online">
+                      ✓ done
                     </span>
                   </div>
                 );
@@ -236,15 +247,15 @@ export default function AutonomousPage() {
           </section>
         )}
 
-        <section className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
-          <h2 className="mb-4 text-lg font-semibold text-white">
+        <section className="glass p-6">
+          <h2 className="mb-4 font-display text-lg font-semibold text-ink">
             Scheduled Recurring Tasks
           </h2>
           <div className="mb-5 flex flex-col gap-2 sm:flex-row">
             <select
               value={schedAgent}
               onChange={(e) => setSchedAgent(e.target.value)}
-              className="rounded-lg border border-gray-700 bg-gray-950/80 px-3 py-2 text-sm text-gray-100 outline-none focus:ring-2 focus:ring-emerald-500/50"
+              className="rounded-xl border border-hairline bg-field px-3 py-2 text-sm text-ink outline-none transition focus:border-online/50 focus:ring-2 focus:ring-online/30"
             >
               {AGENTS.map((a) => (
                 <option key={a.key} value={a.key}>
@@ -255,8 +266,8 @@ export default function AutonomousPage() {
             <input
               value={schedTask}
               onChange={(e) => setSchedTask(e.target.value)}
-              placeholder="Recurring task..."
-              className="flex-1 rounded-lg border border-gray-700 bg-gray-950/80 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="Recurring task…"
+              className="flex-1 rounded-xl border border-hairline bg-field px-3 py-2 text-sm text-ink placeholder-muted/70 outline-none transition focus:border-online/50 focus:ring-2 focus:ring-online/30"
             />
             <div className="flex items-center gap-2">
               <input
@@ -264,21 +275,21 @@ export default function AutonomousPage() {
                 min={1}
                 value={interval}
                 onChange={(e) => setInterval(Number(e.target.value))}
-                className="w-24 rounded-lg border border-gray-700 bg-gray-950/80 px-3 py-2 text-sm text-gray-100 outline-none focus:ring-2 focus:ring-emerald-500/50"
+                className="mono w-24 rounded-xl border border-hairline bg-field px-3 py-2 text-sm text-ink outline-none transition focus:border-online/50 focus:ring-2 focus:ring-online/30"
               />
-              <span className="text-sm text-gray-500">min</span>
+              <span className="text-sm text-muted">min</span>
             </div>
             <button
               onClick={schedule}
               disabled={!schedTask.trim()}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-online/40 bg-online/10 px-4 py-2 text-sm font-semibold text-online transition hover:bg-online/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Schedule
             </button>
           </div>
 
           {scheduled.length === 0 ? (
-            <p className="text-sm text-gray-600">No scheduled tasks yet.</p>
+            <p className="text-sm text-muted/70">No scheduled tasks yet.</p>
           ) : (
             <ul className="flex flex-col gap-3">
               {scheduled.map((t) => {
@@ -286,13 +297,13 @@ export default function AutonomousPage() {
                 return (
                   <li
                     key={t.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-950/60 p-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-panel p-3"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg">{meta?.icon ?? "⚙️"}</span>
                       <div>
-                        <p className="text-sm text-gray-200">{t.task}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-ink/90">{t.task}</p>
+                        <p className="mono text-[11px] uppercase tracking-wider text-muted">
                           {meta?.label ?? t.agent} · every {t.interval_minutes}{" "}
                           min
                         </p>
@@ -300,7 +311,7 @@ export default function AutonomousPage() {
                     </div>
                     <button
                       onClick={() => removeTask(t.id)}
-                      className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                      className="rounded-xl border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/10"
                     >
                       Delete
                     </button>

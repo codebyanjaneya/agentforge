@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ThemeToggle } from "../theme-toggle";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://65-0-30-8.sslip.io";
 
 const AGENTS = [
   { key: "ceo", label: "CEO", icon: "🧠" },
@@ -51,31 +52,37 @@ export default function ImprovePage() {
   const noHistory = report && report.has_history === false;
 
   return (
-    <main className="min-h-screen w-full bg-gray-950 px-4 py-10 sm:px-8">
+    <main className="min-h-screen w-full px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-white">
+            <span className="mono text-[11px] uppercase tracking-[0.3em] text-accent">
+              Reinforcement Loop
+            </span>
+            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-ink sm:text-5xl">
               Self-Improving Agents
             </h1>
-            <p className="mt-1 text-gray-400">
-              Analyze past performance and evolve agent strategy
+            <p className="mt-2 text-sm text-muted">
+              Analyze past performance and evolve agent strategy.
             </p>
           </div>
-          <Link
-            href="/"
-            className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800"
-          >
-            ← Back to Agents
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
+            <Link
+              href="/"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
+            >
+              ← Back to Agents
+            </Link>
+          </div>
         </header>
 
-        <section className="mb-6 rounded-2xl border border-gray-800 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
+        <section className="glass glass-hover mb-6 p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <select
               value={agent}
               onChange={(e) => setAgent(e.target.value)}
-              className="rounded-lg border border-gray-700 bg-gray-950/80 px-3 py-2 text-sm text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="rounded-xl border border-hairline bg-field px-3 py-2 text-sm text-ink outline-none transition focus:border-accent/50 focus:ring-2 focus:ring-accent/30"
             >
               {AGENTS.map((a) => (
                 <option key={a.key} value={a.key}>
@@ -86,12 +93,12 @@ export default function ImprovePage() {
             <button
               onClick={analyze}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Analyzing...
+                  Analyzing…
                 </>
               ) : (
                 "Analyze & Improve"
@@ -101,13 +108,13 @@ export default function ImprovePage() {
         </section>
 
         {error && (
-          <p className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <p className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
             {error}
           </p>
         )}
 
         {noHistory && (
-          <p className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 text-center text-gray-400">
+          <p className="glass p-6 text-center text-muted">
             Run some tasks first to enable self-improvement analysis
           </p>
         )}
@@ -117,27 +124,27 @@ export default function ImprovePage() {
             <Section
               title="✅ Strengths"
               items={report.strengths}
-              accent="border-green-500/30 text-green-300"
+              accent="text-online"
               empty="No strengths identified yet."
             />
             <Section
               title="⚠️ Weaknesses"
               items={report.weaknesses}
-              accent="border-amber-500/30 text-amber-300"
+              accent="text-warn"
               empty="No weaknesses identified yet."
             />
             <Section
               title="🚀 Improvements"
               items={report.improvements}
-              accent="border-blue-500/30 text-blue-300"
+              accent="text-accent-soft"
               empty="No improvements suggested yet."
             />
 
-            <section className="rounded-2xl border border-purple-500/30 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
-              <h2 className="mb-3 text-lg font-semibold text-white">
+            <section className="glass p-6">
+              <h2 className="mb-3 font-display text-lg font-semibold text-ink">
                 📋 Updated Strategy
               </h2>
-              <p className="whitespace-pre-wrap text-sm text-gray-200">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/90">
                 {report.updated_strategy || "No updated strategy provided."}
               </p>
             </section>
@@ -160,16 +167,18 @@ function Section({
   empty: string;
 }) {
   return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 shadow-lg backdrop-blur">
-      <h2 className="mb-4 text-lg font-semibold text-white">{title}</h2>
+    <section className="glass p-6">
+      <h2 className="mb-4 font-display text-lg font-semibold text-ink">
+        {title}
+      </h2>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-600">{empty}</p>
+        <p className="text-sm text-muted/70">{empty}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item, index) => (
             <div
               key={index}
-              className={`rounded-lg border bg-gray-950/60 p-3 text-sm text-gray-200 ${accent}`}
+              className={`rounded-xl border border-hairline bg-panel p-3 text-sm ${accent}`}
             >
               {item}
             </div>

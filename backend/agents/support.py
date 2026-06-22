@@ -24,8 +24,8 @@ short_term = ShortTermMemory()
 long_term = LongTermMemory()
 
 
-async def run(task: str) -> str:
-    history = short_term.get(AGENT_NAME)
+async def run(task: str, user_email: str | None = None) -> str:
+    history = short_term.get(AGENT_NAME, user_email)
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(history)
     messages.append({"role": "user", "content": task})
@@ -36,7 +36,8 @@ async def run(task: str) -> str:
     )
     reply = response.choices[0].message.content
 
-    short_term.save(AGENT_NAME, "user", task)
-    short_term.save(AGENT_NAME, "assistant", reply)
+    short_term.save(AGENT_NAME, "user", task, user_email)
+    short_term.save(AGENT_NAME, "assistant", reply, user_email)
+    long_term.save(AGENT_NAME, reply, user_email)
 
     return reply

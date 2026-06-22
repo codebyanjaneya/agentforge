@@ -1,26 +1,410 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------- Theme tokens ---------- */
+:root,
+[data-theme="dark"] {
+  --base: #0a0a0f;
+  --surface: #12121c;
+  --ink: #e8e8ed;
+  --muted: #8b8b96;
+  --accent: #6366f1;
+  --accent-soft: #818cf8;
+  --online: #22d3ee;
+  --warn: #fcd34d;
+
+  /* Surfaces / overlays */
+  --panel: rgba(255, 255, 255, 0.05);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --field: rgba(0, 0, 0, 0.3);
+
+  /* Ambient body glow */
+  --body-glow-1: rgba(99, 102, 241, 0.14);
+  --body-glow-2: rgba(34, 211, 238, 0.08);
+
+  /* Glass */
+  --glass-bg: rgba(18, 18, 28, 0.6);
+  --glass-ring: rgba(255, 255, 255, 0.02);
+  --glass-inset: rgba(255, 255, 255, 0.04);
+  --glass-shadow: 0 18px 50px -24px rgba(99, 102, 241, 0.45);
+  --glass-border: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.55),
+    rgba(34, 211, 238, 0.18) 45%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  --glass-hover-ring: rgba(99, 102, 241, 0.25);
+  --glass-hover-inset: rgba(255, 255, 255, 0.06);
+  --glass-hover-shadow: 0 24px 60px -22px rgba(99, 102, 241, 0.6);
+
+  /* Orbital visualization */
+  --grid-line: rgba(99, 102, 241, 0.07);
+  --grid-sheen: rgba(34, 211, 238, 0.1);
+  --orbit-line: rgba(99, 102, 241, 0.12);
+  --node-core-ring: rgba(99, 102, 241, 0.4);
+  --node-core-shadow: rgba(99, 102, 241, 0.6);
+  --node-active-ring: rgba(34, 211, 238, 0.5);
+  --node-active-shadow: rgba(34, 211, 238, 0.7);
+  --dot-glow: rgba(34, 211, 238, 0.7);
+  --dot-pulse: rgba(34, 211, 238, 0.55);
+}
+
+[data-theme="light"] {
+  /* Warm off-white base, darker ink, more saturated accents */
+  --base: #f4f1ea;
+  --surface: #fbfaf5;
+  --ink: #1b1b22;
+  --muted: #5e5d68;
+  --accent: #4f46e5;
+  --accent-soft: #6366f1;
+  --online: #0e9bb5;
+  --warn: #b45309;
+
+  --panel: rgba(28, 26, 56, 0.04);
+  --hairline: rgba(28, 26, 56, 0.12);
+  --field: rgba(255, 255, 255, 0.75);
+
+  --body-glow-1: rgba(99, 102, 241, 0.12);
+  --body-glow-2: rgba(14, 155, 181, 0.08);
+
+  /* Lighter, softer glass so cards read against a light background */
+  --glass-bg: rgba(255, 255, 255, 0.62);
+  --glass-ring: rgba(28, 26, 56, 0.04);
+  --glass-inset: rgba(255, 255, 255, 0.7);
+  --glass-shadow: 0 18px 45px -26px rgba(79, 70, 229, 0.3);
+  --glass-border: linear-gradient(
+    135deg,
+    rgba(79, 70, 229, 0.35),
+    rgba(14, 155, 181, 0.2) 45%,
+    rgba(28, 26, 56, 0.06) 100%
+  );
+  --glass-hover-ring: rgba(79, 70, 229, 0.22);
+  --glass-hover-inset: rgba(255, 255, 255, 0.85);
+  --glass-hover-shadow: 0 24px 55px -26px rgba(79, 70, 229, 0.35);
+
+  /* Softer, more saturated glows so nodes/lines aren't washed out */
+  --grid-line: rgba(79, 70, 229, 0.08);
+  --grid-sheen: rgba(14, 155, 181, 0.12);
+  --orbit-line: rgba(79, 70, 229, 0.2);
+  --node-core-ring: rgba(79, 70, 229, 0.4);
+  --node-core-shadow: rgba(79, 70, 229, 0.4);
+  --node-active-ring: rgba(14, 155, 181, 0.55);
+  --node-active-shadow: rgba(14, 155, 181, 0.5);
+  --dot-glow: rgba(14, 155, 181, 0.6);
+  --dot-pulse: rgba(14, 155, 181, 0.5);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Palette (mapped to the themeable raw vars above) */
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-online: var(--online);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-warn: var(--warn);
+  --color-panel: var(--panel);
+  --color-hairline: var(--hairline);
+  --color-field: var(--field);
+
+  /* Typography */
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background-color: var(--base);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(
+      1200px 600px at 15% -10%,
+      var(--body-glow-1),
+      transparent 60%
+    ),
+    radial-gradient(900px 500px at 110% 10%, var(--body-glow-2), transparent 55%),
+    var(--base);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}
+
+/* ---------- Glass panels ---------- */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px var(--glass-ring),
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-inset);
+}
+
+/* Faint gradient 1px border via masked pseudo-element */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--glass-border);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glass-hover {
+  transition:
+    box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-hover:hover {
+  box-shadow:
+    0 0 0 1px var(--glass-hover-ring),
+    var(--glass-hover-shadow),
+    inset 0 1px 0 var(--glass-hover-inset);
+}
+
+/* ---------- 3D tilt ---------- */
+.tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* ---------- Status dots ---------- */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-muted);
+  flex: none;
+}
+
+.status-dot.is-active {
+  background: var(--color-online);
+  box-shadow: 0 0 0 0 var(--dot-pulse);
+  animation: dot-pulse 1.6s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+
+.status-dot.is-online {
+  background: var(--color-online);
+  box-shadow: 0 0 8px var(--dot-glow);
+}
+
+@keyframes dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--dot-pulse);
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* ---------- Orbital nodes ---------- */
+/* Positioning/centering is handled by a static wrapper in the markup, so the
+   entrance animation only touches opacity + scale (transform-origin: center).
+   `backwards` keeps nodes hidden during their stagger delay, then reverts to
+   the base transform afterwards so hover scaling still works. */
+.node-in {
+  animation: node-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes node-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.node-glow.is-active {
+  box-shadow:
+    0 0 0 1px var(--node-active-ring),
+    0 0 28px -2px var(--node-active-shadow);
+}
+
+.node-core {
+  box-shadow:
+    0 0 0 1px var(--node-core-ring),
+    0 0 40px -4px var(--node-core-shadow);
+}
+
+/* ---------- Animated connection lines ---------- */
+.orbit-line {
+  stroke: var(--orbit-line);
+  stroke-width: 1;
+  transition:
+    stroke 0.5s ease,
+    stroke-width 0.5s ease;
+}
+
+.orbit-line.is-active {
+  stroke: url(#lineGlow);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 6;
+  animation: line-flow 1s linear infinite;
+}
+
+@keyframes line-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* ---------- Misc helpers ---------- */
+.font-display {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+.font-mono,
+.mono {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+.fade-up {
+  opacity: 0;
+  animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Ambient grid background (behind orbital) ---------- */
+.grid-bg {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 30px 30px;
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 50%,
+    #000 28%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(circle at 50% 50%, #000 28%, transparent 72%);
+  opacity: 0.55;
+  overflow: hidden;
+}
+
+.grid-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    40% 40% at 50% 50%,
+    var(--grid-sheen),
+    transparent 70%
+  );
+  animation: grid-sheen 9s ease-in-out infinite alternate;
+}
+
+@keyframes grid-sheen {
+  from {
+    transform: translate3d(-8%, -6%, 0);
+  }
+  to {
+    transform: translate3d(10%, 7%, 0);
+  }
+}
+
+/* ---------- Scroll-reveal ---------- */
+.reveal .reveal-step,
+.reveal:not(.reveal-step) {
+  opacity: 0;
+  transform: translateY(24px) scale(0.985);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+.reveal.in .reveal-step {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Scroll-drawn connector line ---------- */
+.draw-line {
+  display: block;
+  width: 1px;
+  height: 64px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-accent),
+    var(--color-online)
+  );
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.draw-line.in {
+  transform: scaleY(1);
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .node-in,
+  .fade-up {
+    opacity: 1;
+  }
+
+  .tilt {
+    transform: none !important;
+  }
+
+  .reveal,
+  .reveal.in,
+  .reveal .reveal-step {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .draw-line {
+    transform: scaleY(1) !important;
+  }
+
+  .grid-bg::after {
+    animation: none !important;
+  }
 }

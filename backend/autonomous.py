@@ -45,8 +45,12 @@ class AutonomousExecutor:
     def __init__(self, orchestrator: AgentOrchestrator | None = None):
         self.orchestrator = orchestrator or AgentOrchestrator()
 
-    async def execute(self, agent_name: str, task: str) -> dict:
-        response = await self.orchestrator.run_agent(agent_name, task)
+    async def execute(
+        self, agent_name: str, task: str, user_email: str | None = None
+    ) -> dict:
+        response = await self.orchestrator.run_agent(
+            agent_name, task, user_email
+        )
         actions = self._extract_actions(response)
 
         return {
