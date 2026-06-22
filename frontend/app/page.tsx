@@ -20,6 +20,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { AuthButton } from "./auth-button";
+import { useSession } from "next-auth/react";
 
 type AgentKey =
   | "ceo"
@@ -352,6 +354,8 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [selected, setSelected] = useState<AgentKey>("ceo");
   const wsRef = useRef<WebSocket | null>(null);
+  const { data: session } = useSession();
+  const userEmail = session?.user?.email ?? null;
 
   const updateAgent = useCallback(
     (key: AgentKey, patch: Partial<AgentState>) => {
@@ -420,6 +424,14 @@ export default function Home() {
       const task = state.task.trim();
       if (!task) return;
 
+      if (!userEmail) {
+        updateAgent(key, {
+          status: "idle",
+          error: "Sign in to use AgentForge.",
+        });
+        return;
+      }
+
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         updateAgent(key, {
@@ -436,9 +448,9 @@ export default function Home() {
         primaryResponse: "",
         delegations: [],
       });
-      ws.send(JSON.stringify({ agent: key, task }));
+      ws.send(JSON.stringify({ agent: key, task, user_email: userEmail }));
     },
-    [agents, updateAgent]
+    [agents, updateAgent, userEmail]
   );
 
   const connectionBadge = useMemo(
@@ -505,6 +517,7 @@ export default function Home() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
+            <AuthButton />
             <ThemeToggle />
             <Link
               href="/improve"
@@ -724,7 +737,11 @@ export default function Home() {
 
               <button
                 onClick={() => runAgent(selected)}
-                disabled={selState.status === "running" || !selState.task.trim()}
+                disabled={
+                  !userEmail ||
+                  selState.status === "running" ||
+                  !selState.task.trim()
+                }
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {selState.status === "running" ? (
@@ -732,6 +749,8 @@ export default function Home() {
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Running…
                   </>
+                ) : !userEmail ? (
+                  "Sign in to use AgentForge"
                 ) : (
                   "Run Agent"
                 )}

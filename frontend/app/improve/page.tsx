@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { ThemeToggle } from "../theme-toggle";
 
 const API_BASE = "https://65-0-30-8.sslip.io";
@@ -27,18 +28,26 @@ interface ImprovementReport {
 }
 
 export default function ImprovePage() {
+  const { data: session } = useSession();
+  const userEmail = session?.user?.email ?? null;
   const [agent, setAgent] = useState<string>("sales");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ImprovementReport | null>(null);
   const [error, setError] = useState("");
 
   const analyze = async () => {
+    if (!userEmail) {
+      setError("Sign in to use AgentForge.");
+      return;
+    }
     setLoading(true);
     setError("");
     setReport(null);
     try {
       const res = await fetch(`${API_BASE}/improve/${agent}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_email: userEmail }),
       });
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       setReport(await res.json());
@@ -92,7 +101,7 @@ export default function ImprovePage() {
             </select>
             <button
               onClick={analyze}
-              disabled={loading}
+              disabled={loading || !userEmail}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
@@ -100,6 +109,8 @@ export default function ImprovePage() {
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Analyzing…
                 </>
+              ) : !userEmail ? (
+                "Sign in to use AgentForge"
               ) : (
                 "Analyze & Improve"
               )}
