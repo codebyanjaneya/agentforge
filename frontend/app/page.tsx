@@ -366,14 +366,23 @@ export default function Home() {
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;
+    let pingTimer: ReturnType<typeof setInterval> | undefined;
 
     const connect = () => {
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {
+        setConnected(true);
+        pingTimer = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "ping" }));
+          }
+        }, 25000);
+      };
       ws.onclose = () => {
         setConnected(false);
+        clearInterval(pingTimer);
         reconnectTimer = setTimeout(connect, 2000);
       };
       ws.onerror = () => ws.close();
@@ -414,6 +423,7 @@ export default function Home() {
 
     return () => {
       clearTimeout(reconnectTimer);
+      clearInterval(pingTimer);
       wsRef.current?.close();
     };
   }, [updateAgent]);
