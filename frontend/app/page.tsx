@@ -562,6 +562,12 @@ export default function Home() {
             >
               📊 Digital Twin
             </Link>
+            <Link
+              href="/history"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
+            >
+              🕑 History
+            </Link>
             <span
               className={`inline-flex w-fit items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${connectionBadge}`}
             >
