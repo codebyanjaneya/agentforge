@@ -348,6 +348,21 @@ const STEPS: { title: string; desc: string; icon: ReactNode }[] = [
   },
 ];
 
+// Strips common Markdown syntax so raw LLM output reads as clean plain text
+// (no literal **bold**, *, `code`, or # markers cluttering the response card).
+function cleanMarkdown(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1") // **bold** -> bold
+    .replace(/__(.+?)__/g, "$1") // __bold__ -> bold
+    .replace(/`([^`]+)`/g, "$1") // `code` -> code
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // # headings -> drop marker
+    .replace(/^\s*[*+-]\s+/gm, "- ") // "* item" / "+ item" -> "- item"
+    .replace(/\*(\S[^*]*?\S|\S)\*/g, "$1") // *italic* -> italic
+    .replace(/(^|[^_])_([^_]+)_(?!_)/g, "$1$2") // _italic_ -> italic
+    .trim();
+}
+
 export default function Home() {
   const [agents, setAgents] =
     useState<Record<AgentKey, AgentState>>(INITIAL_STATE);
@@ -558,9 +573,9 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
           {/* Orbital network — tablet & desktop */}
-          <section className="hidden sm:flex sm:flex-col">
+          <section className="hidden sm:flex sm:flex-col lg:sticky lg:top-8 lg:self-start">
             <div className="glass relative mx-auto aspect-square w-full max-w-[540px] p-4">
               <div
                 className="grid-bg pointer-events-none absolute inset-0 rounded-2xl"
@@ -779,9 +794,11 @@ export default function Home() {
                   )}
                   {!selState.error && selState.result && (
                     <p className="whitespace-pre-wrap text-ink/90">
-                      {selState.delegations.length > 0
-                        ? selState.primaryResponse || selState.result
-                        : selState.result}
+                      {cleanMarkdown(
+                        selState.delegations.length > 0
+                          ? selState.primaryResponse || selState.result
+                          : selState.result
+                      )}
                     </p>
                   )}
                   {selState.status === "idle" &&
@@ -821,10 +838,10 @@ export default function Home() {
                               </span>
                             </div>
                             <p className="mb-2 text-xs italic text-muted">
-                              {delegation.task}
+                              {cleanMarkdown(delegation.task)}
                             </p>
                             <p className="whitespace-pre-wrap text-sm text-ink/90">
-                              {delegation.response}
+                              {cleanMarkdown(delegation.response)}
                             </p>
                           </div>
                         );
