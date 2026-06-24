@@ -20,20 +20,25 @@ class SelfImprover:
         self.client = client
         self.analyzer = AgentAnalyzer()
 
-    def _key(self, agent_name: str) -> str:
+    def _key(self, agent_name: str, user_email: str | None = None) -> str:
+        if user_email:
+            return f"improvements:{agent_name}:{user_email}"
         return f"improvements:{agent_name}"
 
-    async def improve(self, agent_name: str) -> dict:
-        report = await self.analyzer.analyze(agent_name)
+    async def improve(self, agent_name: str, user_email: str | None = None) -> dict:
+        report = await self.analyzer.analyze(agent_name, user_email)
         report["analyzed_at"] = datetime.utcnow().isoformat()
-        self.client.set(self._key(agent_name), json.dumps(report))
+        self.client.set(self._key(agent_name, user_email), json.dumps(report))
         return report
 
-    def get_improvements(self, agent_name: str) -> dict:
-        raw = self.client.get(self._key(agent_name))
+    def get_improvements(
+        self, agent_name: str, user_email: str | None = None
+    ) -> dict:
+        raw = self.client.get(self._key(agent_name, user_email))
         if not raw:
             return {
                 "agent_name": agent_name,
+                "user_email": user_email,
                 "strengths": [],
                 "weaknesses": [],
                 "improvements": [],

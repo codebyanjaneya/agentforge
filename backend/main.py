@@ -71,6 +71,10 @@ class ScheduleRequest(BaseModel):
     interval_minutes: int
 
 
+class ImproveRequest(BaseModel):
+    user_email: str | None = None
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -102,13 +106,14 @@ async def delete_task(task_id: str):
 
 
 @app.post("/improve/{agent_name}")
-async def run_improvement(agent_name: str):
-    return await improver.improve(agent_name)
+async def run_improvement(agent_name: str, payload: ImproveRequest | None = None):
+    user_email = payload.user_email if payload else None
+    return await improver.improve(agent_name, user_email)
 
 
 @app.get("/improve/{agent_name}")
-async def get_improvement(agent_name: str):
-    return improver.get_improvements(agent_name)
+async def get_improvement(agent_name: str, user_email: str | None = None):
+    return improver.get_improvements(agent_name, user_email)
 
 
 @app.get("/history/{user_email}")
