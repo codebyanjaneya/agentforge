@@ -14,6 +14,7 @@ interaction — no extra/duplicate save is performed.
 import asyncio
 import logging
 import os
+import re
 
 from dotenv import load_dotenv
 from telegram import Update
@@ -56,6 +57,23 @@ orchestrator = AgentOrchestrator()
 # (Fine for now; swap for a table if persistence across restarts is needed.)
 _linked_emails: dict[int, str] = {}
 _active_agents: dict[int, str] = {}
+
+
+def clean_markdown(text: str) -> str:
+    """Strip common markdown so agent replies read cleanly as plain Telegram text.
+
+    Mirrors the frontend's cleanMarkdown: removes **bold**/__bold__, `code`,
+    leading # headings, and normalizes bullet markers to "- ".
+    """
+    if not text:
+        return text
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    text = re.sub(r'^\s{0,3}#{1,6}\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*[*+-]\s+', '- ', text, flags=re.MULTILINE)
+    text = re.sub(r'\*(\S[^*]*?\S|\S)\*', r'\1', text)
+    return text.strip()
 
 
 def _split_message(text: str, limit: int = TELEGRAM_MAX_CHARS) -> list[str]:
@@ -195,6 +213,9 @@ async def message_handler(
         )
         return
 
+    # Strip markdown once on the full reply (before splitting) so patterns that
+    # span chunk boundaries aren't broken, then send each chunk as plain text.
+    reply = clean_markdown(reply)
     for chunk in _split_message(reply):
         await update.message.reply_text(chunk)
 
