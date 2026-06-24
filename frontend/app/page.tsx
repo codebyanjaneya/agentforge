@@ -363,6 +363,18 @@ function cleanMarkdown(text: string): string {
     .trim();
 }
 
+const TELEGRAM_BOT_USERNAME = "agentforge_official_bot";
+
+// Encode an email the same way the bot's /start <token> handler decodes it:
+// Python's base64.urlsafe_b64encode(email.encode()).decode().rstrip("=").
+// btoa() gives standard base64, so we make it url-safe (+/ -> -_) and drop
+// the trailing "=" padding. encodeURIComponent+unescape yields the UTF-8 byte
+// string btoa expects, matching Python's email.encode() (UTF-8).
+function telegramStartToken(email: string): string {
+  const base64 = btoa(unescape(encodeURIComponent(email)));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 export default function Home() {
   const [agents, setAgents] =
     useState<Record<AgentKey, AgentState>>(INITIAL_STATE);
@@ -568,6 +580,26 @@ export default function Home() {
             >
               🕑 History
             </Link>
+            {userEmail ? (
+              <a
+                href={`https://t.me/${TELEGRAM_BOT_USERNAME}?start=${telegramStartToken(
+                  userEmail
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
+              >
+                🔗 Connect Telegram
+              </a>
+            ) : (
+              <span
+                aria-disabled="true"
+                title="Sign in to connect Telegram and auto-link your email"
+                className="inline-flex w-fit cursor-not-allowed items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/40 opacity-60 backdrop-blur"
+              >
+                🔗 Connect Telegram
+              </span>
+            )}
             <span
               className={`inline-flex w-fit items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${connectionBadge}`}
             >
