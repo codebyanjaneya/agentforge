@@ -1,3 +1,8 @@
+import asyncio
+import logging
+import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,11 +13,36 @@ from improvement.self_improver import SelfImprover
 from memory.long_term import LongTermMemory
 from orchestrator import AgentOrchestrator
 from tasks.scheduler import TaskScheduler
+from telegram_bot import start_telegram_bot
 from voice_handler import build_incoming_response, process_recording
 
 load_dotenv()
 
-app = FastAPI(title="Multi-Agent Startup OS")
+logger = logging.getLogger("uvicorn.error")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    bot_task: asyncio.Task | None = None
+    if os.getenv("TELEGRAM_BOT_TOKEN"):
+        bot_task = asyncio.create_task(start_telegram_bot())
+        logger.info("Telegram bot launched as a background task.")
+    else:
+        logger.warning(
+            "TELEGRAM_BOT_TOKEN not set; skipping Telegram bot startup."
+        )
+    try:
+        yield
+    finally:
+        if bot_task is not None:
+            bot_task.cancel()
+            try:
+                await bot_task
+            except asyncio.CancelledError:
+                pass
+
+
+app = FastAPI(title="Multi-Agent Startup OS", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

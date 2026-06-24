@@ -10,3 +10,4 @@ httpx
 python-multipart
 langchain
 langgraph
+python-telegram-bot==21.6
