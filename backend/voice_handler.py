@@ -45,6 +45,20 @@ def _say_response(text: str) -> str:
     )
 
 
+async def transcribe_audio(audio_bytes: bytes, filename: str = "audio.mp3") -> str:
+    """Transcribe raw audio bytes with Groq Whisper and return the transcript.
+
+    Shared by the Twilio voice flow and the Telegram voice-message handler so
+    the Groq client/model setup lives in exactly one place. Raises on hard API
+    errors; returns an empty string if Whisper produced no text.
+    """
+    transcription = await _groq.audio.transcriptions.create(
+        file=(filename, audio_bytes),
+        model=WHISPER_MODEL,
+    )
+    return (transcription.text or "").strip()
+
+
 async def process_recording(recording_url: str, orchestrator) -> str:
     """Download the Twilio recording, transcribe with Groq Whisper, run the CEO
     agent on the transcript, and return TwiML that reads back the response."""
@@ -68,11 +82,7 @@ async def process_recording(recording_url: str, orchestrator) -> str:
         )
 
     try:
-        transcription = await _groq.audio.transcriptions.create(
-            file=("recording.mp3", audio_bytes),
-            model=WHISPER_MODEL,
-        )
-        transcript = (transcription.text or "").strip()
+        transcript = await transcribe_audio(audio_bytes, "recording.mp3")
     except Exception:  # noqa: BLE001
         return _say_response(
             "Sorry, I could not understand the audio. Please try again."
