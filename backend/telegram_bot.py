@@ -30,7 +30,12 @@ from telegram.ext import (
     filters,
 )
 
-from memory.long_term import LongTermMemory
+from memory.long_term import (
+    LongTermMemory,
+    get_link,
+    set_active_agent,
+    set_email,
+)
 from orchestrator import AgentOrchestrator
 from voice_handler import transcribe_audio
 
@@ -78,11 +83,6 @@ orchestrator = AgentOrchestrator()
 
 # Same long-term store the GET /history/{user_email} endpoint reads from.
 long_term = LongTermMemory()
-
-# Simple in-memory state. chat_id -> linked email, chat_id -> active agent.
-# (Fine for now; swap for a table if persistence across restarts is needed.)
-_linked_emails: dict[int, str] = {}
-_active_agents: dict[int, str] = {}
 
 
 def clean_markdown(text: str) -> str:
@@ -180,15 +180,14 @@ async def _process_task(
     context: ContextTypes.DEFAULT_TYPE,
     chat_id: int,
     email: str,
+    agent_name: str,
     task: str,
 ) -> None:
-    """Run the chat's active agent on `task` and send back the cleaned reply.
+    """Run the given agent on `task` and send back the cleaned reply.
 
     Shared by the text and voice handlers so both go through identical
     dispatch, error handling, and markdown cleanup.
     """
-    agent_name = _active_agents.get(chat_id, DEFAULT_AGENT)
-
     # Show a "typing…" indicator while the LLM works (a few seconds).
     try:
         await context.bot.send_chat_action(
@@ -229,8 +228,7 @@ async def start_command(
     if context.args:
         email = _decode_link_token(context.args[0].strip())
         if email:
-            _linked_emails[chat_id] = email
-            _active_agents.setdefault(chat_id, DEFAULT_AGENT)
+            await asyncio.to_thread(set_email, chat_id, email)
             await update.message.reply_text(
                 f"✅ Linked to {email} straight from your AgentForge "
                 f"dashboard.\n\n"
@@ -274,8 +272,9 @@ async def link_command(
         )
         return
 
-    _linked_emails[chat_id] = email
-    active = _active_agents.setdefault(chat_id, DEFAULT_AGENT)
+    await asyncio.to_thread(set_email, chat_id, email)
+    link = await asyncio.to_thread(get_link, chat_id)
+    active = (link.get("active_agent") if link else None) or DEFAULT_AGENT
     await update.message.reply_text(
         f"✅ Linked to {email}.\n"
         f"Your active agent is '{active}'. Send a message to get started, "
@@ -314,7 +313,7 @@ async def agent_button_callback(
         return
 
     chat_id = query.message.chat.id
-    _active_agents[chat_id] = name
+    await asyncio.to_thread(set_active_agent, chat_id, name)
     await query.edit_message_text(
         f"✅ Active agent set to {AGENT_EMOJIS[name]} {name.capitalize()}.\n"
         f"{AGENT_DESCRIPTIONS[name]}"
@@ -327,7 +326,8 @@ async def agent_command(
 ) -> None:
     chat_id = update.effective_chat.id
     if not context.args:
-        current = _active_agents.get(chat_id, DEFAULT_AGENT)
+        link = await asyncio.to_thread(get_link, chat_id)
+        current = (link.get("active_agent") if link else None) or DEFAULT_AGENT
         await update.message.reply_text(
             f"Your active agent is '{current}'. "
             f"Use /agent <name> to change it, or /agents to see the list."
@@ -342,7 +342,7 @@ async def agent_command(
         )
         return
 
-    _active_agents[chat_id] = name
+    await asyncio.to_thread(set_active_agent, chat_id, name)
     await update.message.reply_text(f"✅ Active agent set to '{name}'.")
 
 
@@ -350,7 +350,8 @@ async def message_handler(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     chat_id = update.effective_chat.id
-    email = _linked_emails.get(chat_id)
+    link = await asyncio.to_thread(get_link, chat_id)
+    email = link["email"] if link else None
     if not email:
         await update.message.reply_text(
             "Please link your email first so I can save your work:\n"
@@ -362,7 +363,8 @@ async def message_handler(
     if not task:
         return
 
-    await _process_task(update, context, chat_id, email, task)
+    agent_name = (link.get("active_agent") if link else None) or DEFAULT_AGENT
+    await _process_task(update, context, chat_id, email, agent_name, task)
 
 
 async def voice_message_handler(
@@ -370,7 +372,8 @@ async def voice_message_handler(
 ) -> None:
     """Transcribe a voice/audio message with Groq Whisper, then run it as a task."""
     chat_id = update.effective_chat.id
-    email = _linked_emails.get(chat_id)
+    link = await asyncio.to_thread(get_link, chat_id)
+    email = link["email"] if link else None
     if not email:
         await update.message.reply_text(
             "Please link your email first so I can save your work:\n"
@@ -417,7 +420,8 @@ async def voice_message_handler(
 
     # Echo back what was heard so the user can confirm, then run it as a task.
     await update.message.reply_text(f"🎙️ I heard: {transcript}")
-    await _process_task(update, context, chat_id, email, transcript)
+    agent_name = (link.get("active_agent") if link else None) or DEFAULT_AGENT
+    await _process_task(update, context, chat_id, email, agent_name, transcript)
 
 
 async def recent_history_command(
@@ -425,7 +429,8 @@ async def recent_history_command(
 ) -> None:
     """Send the linked user's most recent history entries."""
     chat_id = update.effective_chat.id
-    email = _linked_emails.get(chat_id)
+    link = await asyncio.to_thread(get_link, chat_id)
+    email = link["email"] if link else None
     if not email:
         await update.message.reply_text(
             "Please link your email first so I can pull your history:\n"

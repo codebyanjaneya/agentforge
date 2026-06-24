@@ -1,7 +1,15 @@
 from datetime import datetime
 
 from dotenv import load_dotenv
-from sqlalchemy import DateTime, Integer, String, Text, create_engine, desc
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    desc,
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -36,7 +44,61 @@ class AgentMemory(Base):
     )
 
 
+class TelegramLink(Base):
+    """Persists each Telegram chat's linked email and active agent so they
+    survive backend restarts/deploys (otherwise users must /link again)."""
+
+    __tablename__ = "telegram_links"
+
+    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    active_agent: Mapped[str] = mapped_column(String(100), default="ceo")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
 Base.metadata.create_all(engine)
+
+
+def get_link(chat_id: int) -> dict | None:
+    """Return the stored link record for a chat, or None if not linked yet."""
+    with SessionLocal() as session:
+        row = session.get(TelegramLink, chat_id)
+        if row is None:
+            return None
+        return {
+            "chat_id": row.chat_id,
+            "email": row.email,
+            "active_agent": row.active_agent,
+            "updated_at": (
+                row.updated_at.isoformat() if row.updated_at else None
+            ),
+        }
+
+
+def set_email(chat_id: int, email: str) -> None:
+    """Upsert the linked email for a chat (active agent defaults to 'ceo')."""
+    with SessionLocal() as session:
+        row = session.get(TelegramLink, chat_id)
+        if row is None:
+            session.add(TelegramLink(chat_id=chat_id, email=email))
+        else:
+            row.email = email
+        session.commit()
+
+
+def set_active_agent(chat_id: int, agent_name: str) -> None:
+    """Upsert the active agent for a chat (email stays None if not linked)."""
+    with SessionLocal() as session:
+        row = session.get(TelegramLink, chat_id)
+        if row is None:
+            session.add(
+                TelegramLink(chat_id=chat_id, active_agent=agent_name)
+            )
+        else:
+            row.active_agent = agent_name
+        session.commit()
 
 
 class LongTermMemory:
