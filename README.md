@@ -1,4 +1,4 @@
-# 🚀 AgentForge
+# AgentForge
 
 **Multi-Agent AI Operating System** — a startup-in-a-box powered by autonomous LLM agents that collaborate, remember, act, and improve themselves.
 
@@ -6,7 +6,7 @@ Built with **FastAPI**, **Next.js**, **Groq (Llama 3.3 70B)**, **Redis**, and **
 
 ---
 
-## ✨ Features
+## Features
 
 - **7 specialized agents** — CEO, Sales, Marketing, Support, Research, Finance, and Hiring — each with its own system prompt and persona.
 - **Memory** — short-term conversation memory in Redis and long-term summaries in PostgreSQL, so agents stay consistent over time.
@@ -18,7 +18,7 @@ Built with **FastAPI**, **Next.js**, **Groq (Llama 3.3 70B)**, **Redis**, and **
 
 ---
 
-## 🧱 Architecture
+## Architecture
 
 ```
 startup-os/
@@ -46,7 +46,7 @@ startup-os/
 
 ---
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 - Python 3.11+
 - Node.js 18+
@@ -63,7 +63,7 @@ docker run -d --name agentforge-postgres -e POSTGRES_PASSWORD=agentforge123 -e P
 
 ---
 
-## ⚙️ Setup
+## Setup
 
 ### Backend
 
@@ -102,7 +102,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 | Method | Endpoint                  | Description                                  |
 | ------ | ------------------------- | -------------------------------------------- |
@@ -117,7 +117,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🤖 Agents
+## Agents
 
 | Agent     | Focus                                                        |
 | --------- | ----------------------------------------------------------- |
@@ -131,6 +131,6 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 📄 License
+## License
 
 MIT
