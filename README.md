@@ -1,6 +1,6 @@
 # AgentForge
 
-**Multi-Agent AI Operating System** — a startup-in-a-box powered by autonomous LLM agents that collaborate, remember, act, and improve themselves.
+**Multi-Agent AI Operating System**: a startup-in-a-box powered by autonomous LLM agents that collaborate, remember, act, and improve themselves.
 
 Built with **FastAPI**, **Next.js**, **Groq (Llama 3.3 70B)**, **Redis**, and **PostgreSQL**.
 
@@ -8,13 +8,13 @@ Built with **FastAPI**, **Next.js**, **Groq (Llama 3.3 70B)**, **Redis**, and **
 
 ## Features
 
-- **7 specialized agents** — CEO, Sales, Marketing, Support, Research, Finance, and Hiring — each with its own system prompt and persona.
-- **Memory** — short-term conversation memory in Redis and long-term summaries in PostgreSQL, so agents stay consistent over time.
-- **CEO delegation** — the CEO agent breaks a goal into subtasks and automatically delegates them to the relevant agents.
-- **Autonomous execution** — agents turn responses into concrete, tracked actions (email drafts, reports, strategies, leads, analyses).
-- **Task scheduler** — schedule recurring agent tasks (stored in Redis).
-- **Self-improving agents** — an AI performance analyst reviews each agent's history and produces strengths, weaknesses, improvements, and an updated strategy.
-- **Digital Twin dashboard** — a live startup simulation with KPIs, a revenue chart, an agent activity feed, and CEO forecasts.
+- **7 specialized agents** (CEO, Sales, Marketing, Support, Research, Finance, and Hiring), each with its own system prompt and persona.
+- **Memory**: short-term conversation memory in Redis and long-term summaries in PostgreSQL, so agents stay consistent over time.
+- **CEO delegation**: the CEO agent breaks a goal into subtasks and automatically delegates them to the relevant agents.
+- **Autonomous execution**: agents turn responses into concrete, tracked actions (email drafts, reports, strategies, leads, analyses).
+- **Task scheduler**: schedule recurring agent tasks (stored in Redis).
+- **Self-improving agents**: an AI performance analyst reviews each agent's history and produces strengths, weaknesses, improvements, and an updated strategy.
+- **Digital Twin dashboard**: a live startup simulation with KPIs, a revenue chart, an agent activity feed, and CEO forecasts.
 
 ---
 
