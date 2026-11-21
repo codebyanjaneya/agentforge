@@ -46,18 +46,20 @@ class AutonomousExecutor:
         self.orchestrator = orchestrator or AgentOrchestrator()
 
     async def execute(
-        self, agent_name: str, task: str, user_email: str | None = None
+        self, agent_name: str, task: str, scope
     ) -> dict:
         response = await self.orchestrator.run_agent(
-            agent_name, task, user_email
+            agent_name, task, scope
         )
-        actions = self._extract_actions(response)
+        return self.describe(agent_name, task, response)
 
+    def describe(self, agent_name: str, task: str, response: str) -> dict:
+        """The response shape of ``POST /autonomous/run`` for an answer produced elsewhere (the execution service)."""
         return {
             "agent": agent_name,
             "task": task,
             "response": response,
-            "actions": actions,
+            "actions": self._extract_actions(response),
             "executed_at": datetime.utcnow().isoformat(),
         }
 

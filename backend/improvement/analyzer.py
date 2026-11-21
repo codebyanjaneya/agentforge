@@ -28,14 +28,13 @@ class AgentAnalyzer:
         self.short_term = ShortTermMemory()
         self.long_term = LongTermMemory()
 
-    async def analyze(self, agent_name: str, user_email: str | None = None) -> dict:
-        interactions = self.short_term.get(agent_name, user_email)
-        summaries = self.long_term.get(agent_name, user_email)
+    async def analyze(self, agent_name: str, scope) -> dict:
+        interactions = self.short_term.get(scope, agent_name)
+        summaries = self.long_term.get(scope, agent_name)
 
         if not interactions and not summaries:
             return {
                 "agent_name": agent_name,
-                "user_email": user_email,
                 "strengths": [],
                 "weaknesses": [],
                 "improvements": [],
@@ -58,7 +57,6 @@ class AgentAnalyzer:
 
         return {
             "agent_name": agent_name,
-            "user_email": user_email,
             "strengths": parsed.get("strengths", []),
             "weaknesses": parsed.get("weaknesses", []),
             "improvements": parsed.get("improvements", []),

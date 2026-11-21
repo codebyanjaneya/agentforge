@@ -1,64 +1,21 @@
-from datetime import datetime
-
 from dotenv import load_dotenv
-from sqlalchemy import (
-    BigInteger,
-    DateTime,
-    Integer,
-    String,
-    Text,
-    create_engine,
-    desc,
-)
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-    sessionmaker,
-)
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from config import get_settings
+from memory.repository import MemoryRepository
+from memory.models import AgentMemory, Base, TelegramLink  # noqa: F401  (re-exported for compatibility)
 
 load_dotenv()
 
-import os
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=1800)
+# Lazy engine: no connection is opened at import time. Tables are created only by Alembic
+# migrations (a separate deployment step); startup just verifies the schema version.
+engine = create_engine(
+    get_settings().database_url.get_secret_value(),
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-class AgentMemory(Base):
-    __tablename__ = "agent_memories"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    agent_name: Mapped[str] = mapped_column(String(100), index=True)
-    user_email: Mapped[str | None] = mapped_column(
-        String(255), index=True, nullable=True
-    )
-    summary: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
-    )
-
-
-class TelegramLink(Base):
-    """Persists each Telegram chat's linked email and active agent so they
-    survive backend restarts/deploys (otherwise users must /link again)."""
-
-    __tablename__ = "telegram_links"
-
-    chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    active_agent: Mapped[str] = mapped_column(String(100), default="ceo")
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-
-Base.metadata.create_all(engine)
 
 
 def get_link(chat_id: int) -> dict | None:
@@ -101,56 +58,9 @@ def set_active_agent(chat_id: int, agent_name: str) -> None:
         session.commit()
 
 
-class LongTermMemory:
-    def save(
-        self,
-        agent_name: str,
-        summary: str,
-        user_email: str | None = None,
-    ) -> None:
-        with SessionLocal() as session:
-            session.add(
-                AgentMemory(
-                    agent_name=agent_name,
-                    summary=summary,
-                    user_email=user_email,
-                )
-            )
-            session.commit()
+class LongTermMemory(MemoryRepository):
+    """Scope-only memory (M1-E). The email-keyed API was removed: every method takes a ``MemoryScope`` first, and
+    anything else (an email string, None) raises ``ScopeError`` before touching the database."""
 
-    def get(self, agent_name: str, user_email: str | None = None) -> list:
-        with SessionLocal() as session:
-            query = session.query(AgentMemory).filter(
-                AgentMemory.agent_name == agent_name
-            )
-            if user_email is not None:
-                query = query.filter(AgentMemory.user_email == user_email)
-            rows = query.order_by(desc(AgentMemory.created_at)).limit(10).all()
-            return [
-                {
-                    "id": row.id,
-                    "agent_name": row.agent_name,
-                    "user_email": row.user_email,
-                    "summary": row.summary,
-                    "created_at": row.created_at.isoformat(),
-                }
-                for row in rows
-            ]
-
-    def get_history(self, user_email: str) -> list:
-        """Return every stored memory for a single user, newest first."""
-        with SessionLocal() as session:
-            rows = (
-                session.query(AgentMemory)
-                .filter(AgentMemory.user_email == user_email)
-                .order_by(desc(AgentMemory.created_at))
-                .all()
-            )
-            return [
-                {
-                    "agent_name": row.agent_name,
-                    "summary": row.summary,
-                    "created_at": row.created_at.isoformat(),
-                }
-                for row in rows
-            ]
+    def __init__(self, session_factory=None):
+        super().__init__(session_factory or SessionLocal)

@@ -5,6 +5,7 @@ from datetime import datetime
 import redis
 from dotenv import load_dotenv
 
+from authz.scope import require_scope
 from improvement.analyzer import AgentAnalyzer
 
 load_dotenv()
@@ -20,25 +21,24 @@ class SelfImprover:
         self.client = client
         self.analyzer = AgentAnalyzer()
 
-    def _key(self, agent_name: str, user_email: str | None = None) -> str:
-        if user_email:
-            return f"improvements:{agent_name}:{user_email}"
-        return f"improvements:{agent_name}"
+    def _key(self, scope, agent_name: str) -> str:
+        scope = require_scope(scope)  # no unscoped key
+        return f"improvements:v2:{scope.user_id}:{scope.workspace_id}:{agent_name}"
 
-    async def improve(self, agent_name: str, user_email: str | None = None) -> dict:
-        report = await self.analyzer.analyze(agent_name, user_email)
+    async def improve(self, agent_name: str, scope) -> dict:
+        key = self._key(scope, agent_name)
+        report = await self.analyzer.analyze(agent_name, scope)
         report["analyzed_at"] = datetime.utcnow().isoformat()
-        self.client.set(self._key(agent_name, user_email), json.dumps(report))
+        self.client.set(key, json.dumps(report))
         return report
 
     def get_improvements(
-        self, agent_name: str, user_email: str | None = None
+        self, agent_name: str, scope
     ) -> dict:
-        raw = self.client.get(self._key(agent_name, user_email))
+        raw = self.client.get(self._key(scope, agent_name))
         if not raw:
             return {
                 "agent_name": agent_name,
-                "user_email": user_email,
                 "strengths": [],
                 "weaknesses": [],
                 "improvements": [],
