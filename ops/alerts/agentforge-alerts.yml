@@ -1,0 +1,132 @@
+# AgentForge alert rules (Prometheus rule-file format). DEFINED AND SYNTAX/METRIC-NAME TESTED (backend/tests/test_alert_rules.py); NOT LIVE: no monitoring backend is configured in this repository.
+# Metrics are PER PROCESS: aggregate with sum()/max() across every API and worker instance you scrape. Thresholds are starting points to tune against a real baseline, not measured SLOs.
+# Runbook anchors point at docs/operations.md.
+groups:
+  - name: agentforge-availability
+    rules:
+      - alert: AgentForgeInstanceDown
+        expr: up{job="agentforge"} == 0
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: "An AgentForge API or worker instance is not being scraped"
+          runbook: "docs/operations.md#2-health-and-readiness"
+      - alert: AgentForgeNotReady
+        expr: sum(increase(agentforge_readiness_failures_total[5m])) > 0
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "Readiness probes are failing: the database is unreachable from at least one instance"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeHighServerErrorRate
+        expr: sum(rate(agentforge_http_requests_total{status="5xx"}[5m])) / clamp_min(sum(rate(agentforge_http_requests_total[5m])), 0.1) > 0.05
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: "More than 5% of API requests are failing with 5xx"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeHighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(agentforge_http_request_seconds_bucket[5m]))) > 5
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "p95 API latency is above 5 s (buckets are coarse: 5, 30, 120 ...)"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+  - name: agentforge-execution
+    rules:
+      - alert: AgentForgeUnknownSideEffectOutcome
+        expr: agentforge_dispatch_unresolved > 0
+        for: 15m
+        labels: {severity: page}
+        annotations:
+          summary: "An external action has an unproven outcome and nobody has reconciled it for 15 minutes"
+          runbook: "docs/operations.md#8-incident-runbook-first-15-minutes"
+      - alert: AgentForgeUnknownOutcomesRising
+        expr: sum(increase(agentforge_dispatch_unknown_total[1h])) > 3
+        for: 0m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Several side-effect outcomes became unknown within an hour (a flaky integration or crashing workers)"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeApprovalBacklog
+        expr: agentforge_approvals_pending > 10
+        for: 30m
+        labels: {severity: ticket}
+        annotations:
+          summary: "More than 10 approvals have been waiting for a person for 30 minutes"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeRunsFailingOrInterrupted
+        expr: sum(increase(agentforge_runs_finished_total{status=~"failed|interrupted|partial"}[30m])) / clamp_min(sum(increase(agentforge_runs_finished_total[30m])), 1) > 0.3
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: "More than 30% of finished runs ended failed, partial or interrupted"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeLeaseTakeoversHigh
+        expr: sum(increase(agentforge_lease_takeovers_total[15m])) > 5
+        for: 0m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Workers are repeatedly losing run leases (crashes, stalls or an overloaded database)"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeNoWorkersWhileRunsWaiting
+        expr: agentforge_runs_running > 0 and agentforge_workers_registered == 0
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: "Runs are in progress but no worker process is registered"
+          runbook: "docs/operations.md#1-processes-and-startup--shutdown"
+  - name: agentforge-dependencies
+    rules:
+      - alert: AgentForgeProviderRateLimitExhausted
+        expr: sum(increase(agentforge_provider_events_total{kind="exhausted"}[15m])) > 0
+        for: 0m
+        labels: {severity: ticket}
+        annotations:
+          summary: "A model request exhausted its rate-limit retry budget (provider quota or the global concurrency cap)"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeProviderCapNotEnforced
+        expr: min(agentforge_provider_global_cap_enforced) == 0
+        for: 1m
+        labels: {severity: page}
+        annotations:
+          summary: "The global model-provider concurrency cap is NOT enforced by at least one process (Redis outage, failover quarantine or explicit degrade mode)"
+          runbook: "docs/operations.md#10-redis-failure-behaviour"
+      - alert: AgentForgeRedisUnavailable
+        expr: sum(increase(agentforge_redis_unavailable_total[5m])) > 0
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "Redis calls are failing: rate limits and provider coordination are degraded to per-process (or failing closed)"
+          runbook: "docs/operations.md#10-redis-failure-behaviour"
+      - alert: AgentForgeDatabasePoolNearExhaustion
+        expr: max(agentforge_db_pool_checked_out / clamp_min(agentforge_db_pool_size, 1)) > 0.9
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "An instance has more than 90% of its database connections checked out"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+      - alert: AgentForgeRateLimitingHeavy
+        expr: sum(rate(agentforge_rate_limited_total[10m])) > 1
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Sustained per-user rate limiting (a runaway client or limits set too low)"
+          runbook: "docs/operations.md#7-failure-diagnosis"
+  - name: agentforge-backup
+    rules:
+      # EXTERNAL metric: the backup job must publish it (node-exporter textfile collector or a Pushgateway). The application does not emit it.
+      - alert: AgentForgeBackupStale
+        expr: time() - agentforge_backup_last_success_timestamp_seconds > 90000
+        for: 0m
+        labels: {severity: page}
+        annotations:
+          summary: "No successful database backup in the last 25 hours (metric published by the backup job, not by the app)"
+          runbook: "docs/operations.md#4-backup-and-restore-postgresql--drilled-on-a-disposable-container"
+      - alert: AgentForgeRestoreVerificationFailed
+        expr: agentforge_restore_verification_ok == 0
+        for: 0m
+        labels: {severity: page}
+        annotations:
+          summary: "The last scheduled restore verification failed (metric published by the verification job, not by the app)"
+          runbook: "docs/operations.md#4-backup-and-restore-postgresql--drilled-on-a-disposable-container"

@@ -9,3 +9,16 @@ node_modules/
 *.pyc
 .vercel
 .env*
+.pytest_cache/
+
+# local artifacts (never commit)
+.playwright-mcp/
+ops/sentinel_drill/out/
+*.db
+*.sqlite
+*.log
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.pem

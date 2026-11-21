@@ -1,0 +1,6 @@
+## Sprint 2 (2026-11-19/20): append-ready notes
+
+- D069 execution truth: the server decides task success from the dispatch ledger; unknown or failed side effects block success regardless of prose or `required_tool`. D070 per-user Redis rate limits. D071 Redis provider cooldown and global slots (3 real processes verified). D072 observability baseline. All "Directed; owner confirmation pending". D046 and D050 untouched.
+- Evidence: backend 72 files, one process per file, 1,303 passed (4 early failures fixed and re-run); PostgreSQL 16 disposable: 63 passed; a real deadlock (finish vs recovery lock order) found on PostgreSQL and fixed; backup/restore/rollback drilled; load baseline /health 296 rps, /ready 268 rps (local, one process).
+- Not verified: a GitHub CI run, the full PostgreSQL file after the lock-order fix, browser rendering of the new failure codes, authenticated or provider load, WAL/PITR, tracing and alerts.
+- Files: backend `ratelimit.py`, `observability.py`, `agentplatform/coordination.py`; changes in `execution.py`, `tools/invoker.py`, `tools/dispatch.py`, `resilience.py`, `config.py`, `main.py`; tests `test_execution_truth`, `test_ratelimit`, `test_observability`, `test_observability_run`, `test_provider_coordination`; `docs/operations.md`; `.github/workflows/ci.yml`.
