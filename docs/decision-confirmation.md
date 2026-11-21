@@ -1,6 +1,6 @@
 # Decision confirmation request: D069 to D074
 
-Status of all six today: **Directed by the sprint briefs, owner confirmation pending.** Nothing in `decision.md` was changed by this summary, and D046 and D050 are untouched. Reply with, for example, "confirm D069, D071; D073 only after the Resend sandbox test", and only then will statuses be edited.
+**Recorded 2026-11-21:** D069, D070, D071 and D072 were confirmed by the owner with exactly the meanings and trade-offs in the table below (now "Accepted" in `decision.md`). D073 and D074 stay "Directed, owner confirmation pending" (conditions below). History: until 2026-11-21 all six were "Directed by the sprint briefs, owner confirmation pending." D046 and D050 are untouched.
 
 | ID | What it means in operation | What confirming approves | Trade-off you accept |
 |---|---|---|---|
@@ -10,5 +10,18 @@ Status of all six today: **Directed by the sprint briefs, owner confirmation pen
 | **D072** Observability baseline | `/metrics` (token protected, bounded labels), JSON logs with correlation ids, `/ready` separate from `/health`. | The metric names and label sets as the operational contract. | Renaming a metric later is a breaking change for dashboards and alerts. No distributed tracing yet. |
 | **D073** `email.send@1` via Resend | The first real side-effecting tool: one recipient, sandbox recipients only by default, an approval of the exact message per call, a stable idempotency key, **no** key-based lookup claimed. | Resend as the first integration and the "unknown is reconciled by a person" rule for it. | Real Resend calls are **unverified** (no sandbox key was available); a lost answer needs a person. Not exactly-once. |
 | **D074** Alerting and edge | In-process alert evaluator with a webhook and Redis de-duplication; request-size and Host limits in the app, with an nginx reference config. | Alerting without a new service; the app-level protections. | A production receiver, on-call routing and the real edge are **unverified**; an in-process evaluator dies with the process (an external monitor is still advised). |
+
+## Recorded outcome (2026-11-21)
+
+| ID | Status now | Condition for the remaining ones |
+|---|---|---|
+| D069 | Accepted (owner-confirmed) | none |
+| D070 | Accepted (owner-confirmed) | none |
+| D071 | Accepted (owner-confirmed) | none |
+| D072 | Accepted (owner-confirmed) | none |
+| D073 | Directed, owner confirmation pending | a real Resend **sandbox** send and an unknown-outcome / reconciliation test are verified |
+| D074 | Directed, owner confirmation pending | webhook delivery, a production receiver, on-call routing and real edge protections are verified in an authorised environment |
+
+D046 and D050 were not touched. Recording these decisions changed no implementation and no deployment configuration.
 
 Sprint 5 adds no new decision that needs a number: invitations and shared read access are recorded in `flow.md` section 25.36 as implemented behaviour. If you want them as D075/D076 (shared workspace read policy; invitation security model) say so.

@@ -1736,3 +1736,8 @@ Labels: Implemented / Tested locally / Tested on PostgreSQL / Verified in a real
 **Browser journey (all true):** owner invites a never-signed-in address and gets a one-time link; a different signed-in e-mail is refused; the unsigned visitor is sent to sign-in with the token preserved in `callbackUrl`, returns, the token leaves the address bar, joins; sees the owner's plan ("created by") and run ("started by", Completed); has no invite form but has "Leave workspace"; a second use is refused; the owner changes the role (admin) and removes the member.
 
 Disposable resources: containers `s5-pg`, `s5-redis` created and removed; harness processes on 3030/8030 stopped; nothing else touched.
+
+
+### 25.37 Decision record update (2026-11-21)
+
+The owner confirmed D069, D070, D071 and D072 with the meanings and trade-offs in `docs/decision-confirmation.md`; they are "Accepted" in `decision.md` with their earlier "Directed" status kept as history. D073 stays "Directed, owner confirmation pending" until a real Resend sandbox send and an unknown-outcome/reconciliation test are verified; D074 stays pending until webhook delivery, a production receiver, on-call routing and real edge protections are verified in an authorised environment. D046 and D050 untouched. No code, test, migration, workflow or deployment configuration changed in this update; nothing was deployed.
