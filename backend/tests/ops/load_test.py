@@ -19,6 +19,7 @@ It is a regression baseline for THIS machine and THIS workload with a STUB provi
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -250,8 +251,19 @@ def sampler():
         sampling.wait(1.0)
 
 
+def hard_kill(pid):
+    """Hard-kill a process (and, on Windows, its tree: the venv python.exe is a launcher with a child). POSIX processes here have no helper children."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+    else:
+        try:
+            os.kill(int(pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
 def kill_tree(proc):
-    subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
+    hard_kill(proc.pid)
 
 
 KILLED_RUNS = []
@@ -277,7 +289,7 @@ def worker_fault(t_start):
         EVENTS.append({"t": round(time.time() - t_start, 1), "event": "NO worker owned a running run within 25 s: nothing was killed"})
         return
     pid = victim.split(":")[1]
-    subprocess.run(["taskkill", "/PID", pid, "/T", "/F"], capture_output=True)
+    hard_kill(pid)
     EVENTS.append({"t": round(time.time() - t_start, 1), "event": f"worker pid {pid} hard-killed while owning {len(KILLED_RUNS)} running run(s)"})
     time.sleep(args.worker_restart_after)
     workers.append(start_worker(len(workers)))
