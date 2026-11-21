@@ -35,11 +35,15 @@ sentinel parallel-syncs agentforge 1"
 for i in 1 2 3; do docker run -d --name af-s4-s$i --network $NET $HOSTS redis:7-alpine sh -c "printf '%s\n' \"$CONF\" > /tmp/s.conf && redis-server /tmp/s.conf --sentinel" >/dev/null; done
 for _ in $(seq 30); do [ "$(docker exec af-s4-s1 redis-cli -p 26379 sentinel master agentforge 2>/dev/null | grep -A1 num-slaves | tail -1)" = "1" ] && break; sleep 1; done
 echo "addressing=$ADDR mode=$MODE; sentinel sees master: $(docker exec af-s4-s1 redis-cli -p 26379 sentinel get-master-addr-by-name agentforge | tr '\n' ' ') (master $MIP, replica $RIP)"
+for _ in $(seq 90); do [ "$(docker exec $MASTER redis-cli set af:drill:ready 1 2>/dev/null)" = "OK" ] && [ "$(docker exec $REPLICA redis-cli get af:drill:ready 2>/dev/null)" = "1" ] && break; sleep 1; done  # the master accepts writes AND the replica has them
 docker run -d --name af-s4-client --network $NET -v "$BACKEND":/app:ro -v "$HERE/sentinel_drill":/drill:ro -v "$OUT":/out python:3.11-slim sh -c "pip install -q redis >/dev/null 2>&1 && python /drill/client_loop.py $DURATION $MODE af-s4-s1:26379,af-s4-s2:26379,af-s4-s3:26379 agentforge" >/dev/null
 for _ in $(seq 90); do [ -s "$OUT/timeline.jsonl" ] && break; sleep 1; done
 sleep 8
 TOKEN=$(python -c "import json;print(json.loads(open(r'$OUT/timeline.jsonl').readline())['token'])")
-echo "BEFORE the failover: the lease token is on the replica: $(docker exec $REPLICA redis-cli zscore provider:slots:drill "$TOKEN" | grep -qE '^[0-9]' && echo YES || echo NO); replica role: $(docker exec $REPLICA redis-cli role | head -1)"
+HELD=$(docker exec $REPLICA redis-cli zscore provider:slots:drill "$TOKEN" | grep -qE '^[0-9]' && echo YES || echo NO)
+echo "BEFORE the failover: the lease token is on the replica: $HELD; replica role: $(docker exec $REPLICA redis-cli role | head -1)"
+# An invalid setup is not a product result: without a replicated lease there is no original holder, so the invariant cannot be tested (distinct exit code 2).
+if [ "$HELD" != "YES" ] && [ "$LOSE" != "lose-lease" ]; then echo "DRILL SETUP INVALID: the held lease never reached the replica before the failover (the master refused the write or replication lagged); nothing was tested"; exit 2; fi
 if [ "$LOSE" = "lose-lease" ]; then docker exec $REPLICA redis-cli config set replica-read-only no >/dev/null; docker exec $REPLICA redis-cli del provider:slots:drill >/dev/null; echo "LOSE-LEASE variant: the holder's slot was deleted from the replica just before the failover (simulates the asynchronous-replication gap; the origin key stays)"; fi
 docker stop -t 0 $MASTER >/dev/null; echo "master stopped at $(date -u +%H:%M:%S)"
 NEW=""; for _ in $(seq 90); do NEW=$(docker exec af-s4-s1 redis-cli -p 26379 sentinel get-master-addr-by-name agentforge | head -1); [ "$NEW" = "$RIP" ] && break; sleep 1; done
