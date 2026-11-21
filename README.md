@@ -81,6 +81,8 @@ Verified locally on the commit that carries this README: backend per-file regres
 
 **Not verified:** a live model run at scale, a real Resend send, any staging or production deployment, a production alert receiver and on-call, a real edge/CDN, screen-reader behaviour, Redis Cluster, multi-host load, and measured RTO/RPO. Known limits: legacy short-term chat memory is not Sentinel-aware; losing Redis's origin key together with all slots is undetectable; no owner transfer; invitation lifetime is a constant (7 days).
 
+See [docs/release-assessment.md](docs/release-assessment.md) for the verdict (staging-ready, not production-ready) with verified-locally, verified-in-staging and verified-externally kept apart, [docs/recovery-and-staging.md](docs/recovery-and-staging.md) for the measured local recovery drills and the staging runbook, and [docs/accessibility.md](docs/accessibility.md) for the accessibility record and the manual screen-reader script.
+
 ## Legacy Telegram bot and classic dashboard
 
 `backend/` still serves the original single-user surfaces (agent chat over `/ws`, autonomous runs, scheduled tasks, self-improvement, the Telegram bot with voice) and the classic dashboard at `/` in the frontend; they share the same authentication.

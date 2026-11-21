@@ -1741,3 +1741,22 @@ Disposable resources: containers `s5-pg`, `s5-redis` created and removed; harnes
 ### 25.37 Decision record update (2026-11-21)
 
 The owner confirmed D069, D070, D071 and D072 with the meanings and trade-offs in `docs/decision-confirmation.md`; they are "Accepted" in `decision.md` with their earlier "Directed" status kept as history. D073 stays "Directed, owner confirmation pending" until a real Resend sandbox send and an unknown-outcome/reconciliation test are verified; D074 stays pending until webhook delivery, a production receiver, on-call routing and real edge protections are verified in an authorised environment. D046 and D050 untouched. No code, test, migration, workflow or deployment configuration changed in this update; nothing was deployed.
+
+
+### 25.38 Final release closure programme (2026-11-21)
+
+Verdict: **staging-ready, not production-ready** (`docs/release-assessment.md`). Evidence is split into verified locally and in CI (this section), verified in authorised staging (nothing), verified externally (nothing).
+
+**CI.** The workflow ran on GitHub for the first time; the first runs exposed real Linux portability defects that were fixed without weakening any check: unpinned dependencies (SQLAlchemy 2.1 defaults to psycopg3), a Windows-only `taskkill` in the load harness, a Sentinel-drill setup race (master refusing the first write before the replica was in sync, reported as a false invariant failure), and curl negotiating HTTP/2 in the edge drill. The latest runs passed backend, integration, frontend and release-gates.
+
+**Invitations on PostgreSQL.** `tests/test_invitations_postgres.py` (11 tests, disposable PostgreSQL): lifecycle, secrecy (the raw token is in no column of any table and in no log), identity rules, membership rules, six-way accept race, accept-versus-withdraw race, concurrent invitations and role updates, rollback on an injected failure, constraint behaviour, and migration 0016 -> 0017 -> downgrade -> re-upgrade with data preserved. A mutation (removing the single-use compare-and-swap) is caught.
+
+**D073 (local part).** `tests/test_email_resend.py` gained approval-binding and reconciliation-audit tests for the real email tool (no approval path, rejected approval, approved once with the stable key, changed recipient/subject/text refused, non-sandbox and multi-recipient refused before the network, unknown outcome reconciled to succeeded and to failed with one audit row and no redispatch). The real sandbox send is **not done** (no key anywhere authorised). Status unchanged: pending.
+
+**D074 (local part).** `tests/test_alerting_delivery.py`: 4xx/5xx/non-HTTP/slow/truncated receivers, bounded retries, secret redaction, restart behaviour, and **a defect found and fixed: a webhook redirect was followed (POST turned into GET) and its 200 reported as a delivered alert**; redirects are now failures and never followed. The in-process evaluator's limits and the need for an independent monitor are documented (`docs/operations.md` section 18). No real receiver, on-call or edge verified. Status unchanged: pending.
+
+**Recovery.** Backup/failed-restore, PITR, Redis outage, Sentinel failover (client outage 6.3 s), worker hard-kill under load (0 duplicate sends) measured locally; **no staging RTO/RPO** (`docs/recovery-and-staging.md`).
+
+**Live model.** Failure modes are covered by existing local tests (provider errors, timeouts, malformed responses, 429 and the shared cooldown, concurrency cap, accounting, no fabricated completion). A real run needs a billable call and the owner's explicit go-ahead: **not done**.
+
+**Accessibility.** Two defects fixed (duplicate dialog title ids gave later dialogs the first dialog's accessible name; the mobile top bar was outside any landmark); 45 axe runs 0 violations; reflow, keyboard, dialog and reduced-motion checks pass. **Screen-reader testing was not performed**; the manual script is in `docs/accessibility.md`.
