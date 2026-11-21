@@ -1,4 +1,4 @@
-# Release gate. STATUS: linted locally with actionlint and every command run locally, but NEVER executed by GitHub Actions (no push was permitted): "CI passes on GitHub" is unverified.
+# Release gate. STATUS: executed by GitHub Actions; run 44895273806 (commit a671d0c) passed all four jobs. Earlier runs failed for real portability reasons that were fixed (unpinned SQLAlchemy 2.1 default driver, a Windows-only taskkill in the load harness, a Sentinel-drill setup race, curl negotiating HTTP/2 in the edge drill).
 # No job needs a repository secret: tests use fakes, throw-away databases and loopback services; the only credentials here (`ci`, `ci-token`) are throw-away values for containers that exist for the job.
 # Backend tests run ONE PROCESS PER FILE (the suite's module-purging fixtures need isolated files; see flow.md 25.27).
 name: ci
