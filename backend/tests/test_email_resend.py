@@ -221,3 +221,102 @@ def test_through_the_runtime_a_provider_rejection_is_a_confirmed_failure_that_is
     view = asyncio.run(_run(world, svc, plan(world, required_tool="email.send@1")))
     assert view.status == "failed" and states(world) == ["failed"] and invocation_statuses(world) == ["failed"] and mock.sent == 0
     assert world["db"].scalar("SELECT error_code FROM plan_task_runs") == "side_effect_failed"
+
+
+# ---------------------------------------------------------------- sprint 5 closure: approvals, message binding, reconciliation audit for the REAL email tool
+
+from agentplatform.tools.approvals import ApprovalStore, payload_hash  # noqa: E402
+from agentplatform.tools.builtin import build_default_registry  # noqa: E402
+from agentplatform.tools.invoker import ApprovalUnusable, ToolStore, canonical  # noqa: E402
+from tests.test_approvals import context as approval_context, human, invoke as invoke_tool, stack as approval_stack  # noqa: E402
+import hashlib  # noqa: E402
+import uuid  # noqa: E402
+
+
+@pytest.fixture
+def gated(mock, world, monkeypatch):
+    """The REAL email tool in a registry that keeps the default approval policy (the dispatch tests above bypass approval on purpose)."""
+    registry = build_default_registry()
+    er.register(registry, er.EmailConfig(api_key=KEY, sender="AgentForge <sandbox@resend.dev>", allowed_domains=("resend.dev",), url=mock.url, allow_insecure_test_url=True))
+    monkeypatch.setattr(tools_pkg, "default_registry", lambda: registry)
+    import importlib
+
+    monkeypatch.setattr(importlib.import_module("agentplatform.tools"), "default_registry", lambda: registry)
+    assert registry.gated(registry.get("email.send"))
+    return registry
+
+
+def _args_hash(args):
+    return hashlib.sha256(canonical(args).encode()).hexdigest()
+
+
+def test_without_an_approval_path_the_email_is_refused_and_nothing_is_sent(gated, mock, world):
+    ctx = approval_context(world, gated, tools=("email.send",))
+    _, no_approvals, _ = approval_stack(world, gated, approvals=False)
+    out = invoke_tool(no_approvals, ctx, WIRE, ARGS)
+    assert (out.status, out.error_code) == ("rejected", "approval_required") and mock.sent == 0 and mock.requests == []
+
+
+def test_a_rejected_email_approval_sends_nothing_and_an_approved_one_sends_exactly_once_with_the_operations_key(gated, mock, world):
+    store, invoker, _ = approval_stack(world, gated)
+    ctx = approval_context(world, gated, tools=("email.send",))
+    h = human(world, store, "reject")
+    refused = invoke_tool(invoker, ctx, WIRE, ARGS)
+    h.join()
+    assert refused.status == "rejected" and mock.sent == 0 and mock.requests == []
+
+    ctx2 = approval_context(world, gated, tools=("email.send",))
+    h = human(world, store, "approve")
+    done = invoke_tool(invoker, ctx2, WIRE, ARGS)
+    h.join()
+    assert done.status == "succeeded" and mock.sent == 1 and len(mock.requests) == 1
+    assert mock.requests[0]["key"] == world["db"].scalar("SELECT idempotency_key FROM tool_dispatches") and mock.requests[0]["body"]["to"] == ["delivered@resend.dev"]
+    assert [r[0] for r in world["db"].rows("SELECT status FROM tool_approvals ORDER BY created_at")] == ["rejected", "consumed"]
+
+
+def test_an_approval_authorises_only_the_exact_message_not_a_changed_recipient_subject_or_text(gated, mock, world):
+    spec = gated.get("email.send")
+    store = ApprovalStore(world["sf"])
+    ctx = approval_context(world, gated, tools=("email.send",))
+    approved_hash = _args_hash(ARGS)
+    approval_id = store.request(ctx, spec, 1, "{}", approved_hash, None)
+    store.decide(world["sa"], approval_id, "approve")
+    variants = {"recipient": {**ARGS, "to": "bounced@resend.dev"}, "subject": {**ARGS, "subject": "A different subject"}, "text": {**ARGS, "text": "Different words."}}
+    for name, changed in variants.items():
+        assert _args_hash(changed) != approved_hash, name
+        with pytest.raises(ApprovalUnusable) as info:
+            ToolStore(world["sf"]).begin(ctx, spec, 1, "{}", _args_hash(changed), uuid.uuid4().hex * 2, approval_id)  # the model changed the message after approval
+        assert info.value.reason == "invalid", name
+    assert world["db"].scalar("SELECT count(*) FROM tool_invocations") == 0 and mock.sent == 0
+    assert payload_hash(workspace_id=uuid.uuid4(), user_id=uuid.uuid4(), execution_id=uuid.uuid4(), seq=1, run_id=None, task_key=None, agent_key="x", agent_version_id=None,
+                        tool_id="email.send", tool_version=1, args_hash=approved_hash) != approved_hash
+
+
+def test_a_non_sandbox_recipient_and_a_malformed_message_never_reach_the_network_or_the_approval_queue(gated, mock, world):
+    store, invoker, _ = approval_stack(world, gated)
+    ctx = approval_context(world, gated, tools=("email.send",))
+    out = invoke_tool(invoker, ctx, WIRE, {**ARGS, "to": "customer@example.com"})
+    assert mock.requests == [] and mock.sent == 0
+    out_bad = invoke_tool(invoker, approval_context(world, gated, tools=("email.send",)), WIRE, {**ARGS, "to": "a@resend.dev, b@resend.dev"})
+    assert out_bad.status == "rejected" and mock.requests == []  # ONE recipient only, validated before any approval is requested
+    assert world["db"].scalar("SELECT count(*) FROM tool_approvals WHERE status = 'pending'") == 0
+    assert out.status in ("rejected", "failed")
+
+
+@pytest.mark.parametrize("decision", ["confirmed_succeeded", "confirmed_failed"])
+def test_an_unknown_email_outcome_reconciles_either_way_with_an_audit_row_and_nothing_is_sent_again(mock, email_rig, world, decision):
+    mock.mode = "accept_then_drop"
+    _, svc = process(world, email_rig, script([asks(call(WIRE, ARGS)), final("Sent.")]))
+    first = asyncio.run(_run(world, svc, plan(world, required_tool="email.send@1")))
+    assert first.status == "failed" and states(world) == ["unknown"] and mock.sent == 1
+    invocation_id = uuid.UUID(world["db"].scalar("SELECT invocation_id FROM tool_dispatches"))
+    view = dp.reconcile(world["sf"], world["sa"], invocation_id, decision=decision, evidence_kind="operator_attestation",
+                        evidence="Checked the Resend sandbox dashboard by hand.", reason="Recorded by the workspace owner")
+    expected = "reconciled_succeeded" if decision == "confirmed_succeeded" else "reconciled_failed"
+    assert view["state"] == expected and view["reconciliation"]["attestation_only"] is True and states(world) == [expected]
+    row = world["db"].rows("SELECT decision, evidence_kind, actor_user_id IS NOT NULL FROM tool_reconciliations")
+    assert row == [(decision, "operator_attestation", 1)]  # one audit row with the REAL actor, a statement and not proof
+    assert mock.sent == 1 and len(mock.requests) == 1  # reconciliation never sends and nothing was re-dispatched automatically
+    assert world["db"].scalar("SELECT count(*) FROM tool_dispatches") == 1
+    # the model's own words never turn an unknown/reconciled-by-statement outcome into a verified success of the task
+    assert world["db"].scalar("SELECT error_code FROM plan_task_runs") == "side_effect_outcome_unknown"

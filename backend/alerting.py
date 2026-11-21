@@ -87,6 +87,16 @@ RULES = (
 )
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A 3xx is a failed delivery, never followed: urllib would turn a redirected POST into a GET and report the target's 200 as a delivered alert."""
+
+    def redirect_request(self, *args, **kwargs):  # noqa: D401
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 class WebhookNotifier:
     """POSTs one JSON document to the configured webhook. ``deliver`` returns True only on a 2xx answer; it never raises. The URL is a secret (many webhooks embed a token): it is never logged."""
 
@@ -98,7 +108,7 @@ class WebhookNotifier:
         for attempt in range(self.attempts):
             try:
                 request = urllib.request.Request(self._url, data=data, method="POST", headers={"Content-Type": "application/json", "User-Agent": "agentforge-alerts/1"})
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                with _OPENER.open(request, timeout=self.timeout) as response:
                     if 200 <= response.status < 300:
                         return True
             except Exception as exc:  # noqa: BLE001 - delivery must never raise into the application
