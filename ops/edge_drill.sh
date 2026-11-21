@@ -51,7 +51,7 @@ check "a client-supplied X-Forwarded-For is overwritten (upstream saw: $(echo "$
 big=$(head -c 2097152 /dev/zero | tr '\0' 'a' | curl "${API[@]}" -o /dev/null -w '%{http_code}' -X POST --data-binary @- $A/plans)
 small=$(head -c 5000 /dev/zero | tr '\0' 'a' | curl "${API[@]}" -o /dev/null -w '%{http_code}' -X POST --data-binary @- $A/plans)
 check "a 2 MiB body is refused with 413 and a 5 KB body passes (got $big / $small)" "$([ "$big" = "413" ] && [ "$small" = "200" ] && echo 1 || echo 0)"
-ws=$(curl "${API[@]}" -H "Upgrade: websocket" -H "Connection: Upgrade" $A/ws)
+ws=$(curl --http1.1 "${API[@]}" -H "Upgrade: websocket" -H "Connection: Upgrade" $A/ws)  # a WebSocket handshake is HTTP/1.1: a newer curl would negotiate HTTP/2 and drop these connection-specific headers
 check "a WebSocket upgrade request reaches the upstream with its Upgrade headers" "$(echo "$ws" | python -c 'import sys,json;d=json.load(sys.stdin);print(1 if (d["upgrade"] or "").lower()=="websocket" and "upgrade" in (d["connection"] or "").lower() else 0)')"
 tok=$(curl "${WEB[@]}" -o /dev/null -w '%{http_code}
 ' -X POST "$W/api/backend-token?[1-40]" | grep -c '^429$')
