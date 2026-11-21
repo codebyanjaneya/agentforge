@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { describeError, type HistoryEntry } from "@/lib/api-client";
+import { getApi } from "@/lib/backend";
 import {
   Brain,
   Briefcase,
@@ -14,8 +16,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ThemeToggle } from "../theme-toggle";
-
-const API_BASE = "https://65-0-30-8.sslip.io";
 
 // Same agent identity (icon + accent) used on the main dashboard in page.tsx.
 const AGENT_META: Record<
@@ -76,41 +76,57 @@ function formatRelativeTime(iso: string): string {
   });
 }
 
-interface HistoryEntry {
-  agent_name: string;
-  summary: string;
-  created_at: string;
-}
-
 const COLLAPSE_LIMIT = 280;
 
 export default function HistoryPage() {
-  const { data: session, status } = useSession();
-  const userEmail = session?.user?.email ?? null;
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
 
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [moreError, setMoreError] = useState("");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  // First page (newest entries). The backend pages by an opaque cursor over (created_at, id).
   const loadHistory = useCallback(async () => {
-    if (!userEmail) return;
+    if (!signedIn) return;
     setLoading(true);
     setError("");
+    setMoreError("");
     try {
-      const res = await fetch(
-        `${API_BASE}/history/${encodeURIComponent(userEmail)}`
-      );
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      const data = (await res.json()) as HistoryEntry[];
-      setEntries(Array.isArray(data) ? data : []);
+      const page = await getApi().getHistory();
+      setEntries(page.items);
+      setNextCursor(page.next_cursor);
       setExpanded(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load history");
+      setError(describeError(e, "Failed to load history"));
     } finally {
       setLoading(false);
     }
-  }, [userEmail]);
+  }, [signedIn]);
+
+  // Older entries: the cursor from the previous page is passed back unchanged. Entries are keyed by their id, so a
+  // repeated record can never be shown twice.
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setMoreError("");
+    try {
+      const page = await getApi().getHistory({ cursor: nextCursor });
+      setEntries((prev) => {
+        const seen = new Set(prev.map((entry) => entry.id));
+        return [...prev, ...page.items.filter((entry) => !seen.has(entry.id))];
+      });
+      setNextCursor(page.next_cursor);
+    } catch (e) {
+      setMoreError(describeError(e, "Couldn't load more history."));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [nextCursor, loadingMore]);
 
   useEffect(() => {
     // Intentional one-shot fetch on mount / when the signed-in user changes.
@@ -118,11 +134,11 @@ export default function HistoryPage() {
     loadHistory();
   }, [loadHistory]);
 
-  const toggleExpanded = (index: number) => {
+  const toggleExpanded = (id: number) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -155,7 +171,7 @@ export default function HistoryPage() {
 
         {status === "loading" ? (
           <p className="glass p-6 text-center text-muted">Loading session…</p>
-        ) : !userEmail ? (
+        ) : !signedIn ? (
           <div className="glass p-8 text-center">
             <p className="text-ink/90">Sign in to view your history.</p>
             <p className="mt-1 text-sm text-muted">
@@ -187,19 +203,19 @@ export default function HistoryPage() {
           </p>
         ) : (
           <div className="flex flex-col gap-4">
-            {entries.map((entry, index) => {
+            {entries.map((entry) => {
               const meta = AGENT_META[entry.agent_name] ?? FALLBACK_META;
               const { Icon } = meta;
               const cleaned = cleanMarkdown(entry.summary ?? "");
               const isLong = cleaned.length > COLLAPSE_LIMIT;
-              const isOpen = expanded.has(index);
+              const isOpen = expanded.has(entry.id);
               const shown =
                 isOpen || !isLong
                   ? cleaned
                   : `${cleaned.slice(0, COLLAPSE_LIMIT).trimEnd()}…`;
 
               return (
-                <article key={index} className="glass glass-hover p-5">
+                <article key={entry.id} className="glass glass-hover p-5">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-hairline bg-panel">
@@ -231,7 +247,7 @@ export default function HistoryPage() {
                   {isLong && (
                     <button
                       type="button"
-                      onClick={() => toggleExpanded(index)}
+                      onClick={() => toggleExpanded(entry.id)}
                       className="mt-3 text-xs font-medium text-accent transition-colors hover:text-accent-soft"
                     >
                       {isOpen ? "Show less" : "Show more"}
@@ -240,6 +256,22 @@ export default function HistoryPage() {
                 </article>
               );
             })}
+
+            {moreError && (
+              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
+                {moreError}
+              </p>
+            )}
+            {nextCursor && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="mx-auto inline-flex items-center gap-2 rounded-xl border border-hairline bg-panel px-5 py-2.5 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            )}
           </div>
         )}
       </div>

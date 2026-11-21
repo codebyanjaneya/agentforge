@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import { backendTokens } from "@/lib/backend";
 
 function GoogleIcon() {
   return (
@@ -60,7 +61,10 @@ export function AuthButton() {
         </span>
         <button
           type="button"
-          onClick={() => signOut()}
+          onClick={() => {
+            backendTokens.clear(); // forget the in-memory backend token before the session ends
+            void signOut();
+          }}
           className="rounded-lg border border-transparent px-2.5 py-1 text-xs font-medium text-ink/70 transition-colors hover:border-accent/40 hover:text-ink"
         >
           Sign out

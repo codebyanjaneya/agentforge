@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { describeError, type ImprovementReport } from "@/lib/api-client";
+import { getApi } from "@/lib/backend";
 import { ThemeToggle } from "../theme-toggle";
-
-const API_BASE = "https://65-0-30-8.sslip.io";
 
 const AGENTS = [
   { key: "ceo", label: "CEO", icon: "🧠" },
@@ -17,26 +17,16 @@ const AGENTS = [
   { key: "hiring", label: "Hiring", icon: "👨‍💻" },
 ] as const;
 
-interface ImprovementReport {
-  agent_name: string;
-  strengths: string[];
-  weaknesses: string[];
-  improvements: string[];
-  updated_strategy: string;
-  has_history?: boolean;
-  analyzed_at?: string;
-}
-
 export default function ImprovePage() {
-  const { data: session } = useSession();
-  const userEmail = session?.user?.email ?? null;
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   const [agent, setAgent] = useState<string>("sales");
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ImprovementReport | null>(null);
   const [error, setError] = useState("");
 
   const analyze = async () => {
-    if (!userEmail) {
+    if (!signedIn) {
       setError("Sign in to use AgentForge.");
       return;
     }
@@ -44,15 +34,9 @@ export default function ImprovePage() {
     setError("");
     setReport(null);
     try {
-      const res = await fetch(`${API_BASE}/improve/${agent}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_email: userEmail }),
-      });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      setReport(await res.json());
+      setReport(await getApi().analyzeAgent(agent));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed");
+      setError(describeError(e, "Analysis failed"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +85,7 @@ export default function ImprovePage() {
             </select>
             <button
               onClick={analyze}
-              disabled={loading || !userEmail}
+              disabled={loading || !signedIn}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
@@ -109,7 +93,7 @@ export default function ImprovePage() {
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Analyzing…
                 </>
-              ) : !userEmail ? (
+              ) : !signedIn ? (
                 "Sign in to use AgentForge"
               ) : (
                 "Analyze & Improve"

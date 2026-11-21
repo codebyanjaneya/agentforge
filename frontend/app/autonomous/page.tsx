@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { describeError, type ExecutionResult, type ScheduledTask } from "@/lib/api-client";
+import { getApi } from "@/lib/backend";
 import { ThemeToggle } from "../theme-toggle";
-
-const API_BASE = "https://65-0-30-8.sslip.io";
 
 const AGENTS = [
   { key: "ceo", label: "CEO", icon: "🧠" },
@@ -25,31 +25,9 @@ const ACTION_META: Record<string, { icon: string; color: string }> = {
   analysis_done: { icon: "📈", color: "text-online border-online/30" },
 };
 
-interface ActionItem {
-  action_type: string;
-  description: string;
-  status: string;
-}
-
-interface ExecutionResult {
-  agent: string;
-  task: string;
-  response: string;
-  actions: ActionItem[];
-  executed_at: string;
-}
-
-interface ScheduledTask {
-  id: string;
-  agent: string;
-  task: string;
-  interval_minutes: number;
-  created_at: string;
-}
-
 export default function AutonomousPage() {
-  const { data: session } = useSession();
-  const userEmail = session?.user?.email ?? null;
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   const [agent, setAgent] = useState<string>("sales");
   const [task, setTask] = useState("");
   const [running, setRunning] = useState(false);
@@ -60,23 +38,27 @@ export default function AutonomousPage() {
   const [schedTask, setSchedTask] = useState("");
   const [interval, setInterval] = useState(60);
   const [scheduled, setScheduled] = useState<ScheduledTask[]>([]);
+  const [taskError, setTaskError] = useState("");
 
   const loadTasks = useCallback(async () => {
+    if (!signedIn) return;
     try {
-      const res = await fetch(`${API_BASE}/tasks`);
-      if (res.ok) setScheduled(await res.json());
-    } catch {
-      // backend offline; ignore
+      setScheduled(await getApi().listTasks());
+      setTaskError("");
+    } catch (e) {
+      setTaskError(describeError(e, "Couldn't load scheduled tasks."));
     }
-  }, []);
+  }, [signedIn]);
 
   useEffect(() => {
+    // Intentional fetch on mount / when the sign-in state changes (state is set after the awaited request).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTasks();
   }, [loadTasks]);
 
   const execute = async () => {
     if (!task.trim()) return;
-    if (!userEmail) {
+    if (!signedIn) {
       setError("Sign in to use AgentForge.");
       return;
     }
@@ -84,47 +66,33 @@ export default function AutonomousPage() {
     setError("");
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/autonomous/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent, task, user_email: userEmail }),
-      });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      setResult(await res.json());
+      setResult(await getApi().runAutonomous(agent, task));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Execution failed");
+      setError(describeError(e, "Execution failed"));
     } finally {
       setRunning(false);
     }
   };
 
   const schedule = async () => {
-    if (!schedTask.trim()) return;
+    if (!schedTask.trim() || !signedIn) return;
     try {
-      const res = await fetch(`${API_BASE}/tasks/schedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agent: schedAgent,
-          task: schedTask,
-          interval_minutes: interval,
-        }),
-      });
-      if (res.ok) {
-        setSchedTask("");
-        await loadTasks();
-      }
-    } catch {
-      // ignore
+      await getApi().scheduleTask({ agent: schedAgent, task: schedTask, interval_minutes: interval });
+      setSchedTask("");
+      setTaskError("");
+      await loadTasks();
+    } catch (e) {
+      setTaskError(describeError(e, "Couldn't schedule the task."));
     }
   };
 
   const removeTask = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/tasks/${id}`, { method: "DELETE" });
-      if (res.ok) await loadTasks();
-    } catch {
-      // ignore
+      await getApi().deleteTask(id);
+      setTaskError("");
+      await loadTasks();
+    } catch (e) {
+      setTaskError(describeError(e, "Couldn't delete the task."));
     }
   };
 
@@ -181,7 +149,7 @@ export default function AutonomousPage() {
             </div>
             <button
               onClick={execute}
-              disabled={running || !task.trim() || !userEmail}
+              disabled={running || !task.trim() || !signedIn}
               className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(99,102,241,0.8)] transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
             >
               {running ? (
@@ -189,7 +157,7 @@ export default function AutonomousPage() {
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Executing…
                 </>
-              ) : !userEmail ? (
+              ) : !signedIn ? (
                 "Sign in to use AgentForge"
               ) : (
                 "Execute"
@@ -290,12 +258,18 @@ export default function AutonomousPage() {
             </div>
             <button
               onClick={schedule}
-              disabled={!schedTask.trim()}
+              disabled={!schedTask.trim() || !signedIn}
               className="rounded-xl border border-online/40 bg-online/10 px-4 py-2 text-sm font-semibold text-online transition hover:bg-online/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Schedule
             </button>
           </div>
+
+          {taskError && (
+            <p className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
+              {taskError}
+            </p>
+          )}
 
           {scheduled.length === 0 ? (
             <p className="text-sm text-muted/70">No scheduled tasks yet.</p>

@@ -22,6 +22,8 @@ import {
 import { ThemeToggle } from "./theme-toggle";
 import { AuthButton } from "./auth-button";
 import { useSession } from "next-auth/react";
+import { AgentSocket, type SocketMessage, type SocketStatus } from "@/lib/agent-socket";
+import { backendTokens, getSocketUrl } from "@/lib/backend";
 
 type AgentKey =
   | "ceo"
@@ -243,8 +245,6 @@ function nodePos(angleDeg: number) {
   };
 }
 
-const WS_URL = "wss://65-0-30-8.sslip.io/ws";
-
 // Reveals an element once it scrolls into view (one-shot).
 function useInView<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
@@ -380,9 +380,13 @@ export default function Home() {
     useState<Record<AgentKey, AgentState>>(INITIAL_STATE);
   const [connected, setConnected] = useState(false);
   const [selected, setSelected] = useState<AgentKey>("ceo");
-  const wsRef = useRef<WebSocket | null>(null);
-  const { data: session } = useSession();
+  const socketRef = useRef<AgentSocket | null>(null);
+  const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
+  const { data: session, status } = useSession();
+  // The signed-in user's email is used ONLY for the Telegram deep link below (pending S1); identity toward the
+  // backend is the bearer token, never an email.
   const userEmail = session?.user?.email ?? null;
+  const signedIn = status === "authenticated";
 
   const updateAgent = useCallback(
     (key: AgentKey, patch: Partial<AgentState>) => {
@@ -391,69 +395,60 @@ export default function Home() {
     []
   );
 
+  const handleSocketMessage = useCallback(
+    (data: SocketMessage) => {
+      const agent = data.agent as AgentKey | undefined;
+      if (!agent) return;
+      if (typeof data.error === "string") {
+        updateAgent(agent, {
+          status: "idle",
+          error: data.error,
+          result: "",
+          primaryResponse: "",
+          delegations: [],
+        });
+      } else {
+        updateAgent(agent, {
+          status: "done",
+          result: typeof data.result === "string" ? data.result : "",
+          error: "",
+          primaryResponse:
+            typeof data.primary_response === "string" ? data.primary_response : "",
+          delegations: Array.isArray(data.delegations)
+            ? (data.delegations as Delegation[])
+            : [],
+        });
+      }
+    },
+    [updateAgent]
+  );
+
+  // One authenticated socket per signed-in session (the backend verifies the bearer token in the first frame).
   useEffect(() => {
-    let reconnectTimer: ReturnType<typeof setTimeout>;
-    let pingTimer: ReturnType<typeof setInterval> | undefined;
-
-    const connect = () => {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setConnected(true);
-        pingTimer = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "ping" }));
-          }
-        }, 25000);
-      };
-      ws.onclose = () => {
-        setConnected(false);
-        clearInterval(pingTimer);
-        reconnectTimer = setTimeout(connect, 2000);
-      };
-      ws.onerror = () => ws.close();
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as {
-            agent?: AgentKey;
-            result?: string;
-            error?: string;
-            primary_response?: string;
-            delegations?: Delegation[];
-          };
-          if (!data.agent) return;
-          if (data.error) {
-            updateAgent(data.agent, {
-              status: "idle",
-              error: data.error,
-              result: "",
-              primaryResponse: "",
-              delegations: [],
-            });
-          } else {
-            updateAgent(data.agent, {
-              status: "done",
-              result: data.result ?? "",
-              error: "",
-              primaryResponse: data.primary_response ?? "",
-              delegations: data.delegations ?? [],
-            });
-          }
-        } catch {
-          // ignore malformed messages
-        }
-      };
-    };
-
-    connect();
-
+    if (!signedIn) return;
+    let url: string;
+    try {
+      url = getSocketUrl();
+    } catch {
+      return; // backend address is not configured: the page stays offline
+    }
+    const socket = new AgentSocket({
+      url,
+      getToken: () => backendTokens.get(),
+      invalidateToken: (token) => backendTokens.invalidate(token),
+      onStatus: (next) => {
+        setSocketStatus(next);
+        setConnected(next === "online");
+      },
+      onMessage: handleSocketMessage,
+    });
+    socketRef.current = socket;
+    socket.start();
     return () => {
-      clearTimeout(reconnectTimer);
-      clearInterval(pingTimer);
-      wsRef.current?.close();
+      socket.stop();
+      socketRef.current = null;
     };
-  }, [updateAgent]);
+  }, [signedIn, handleSocketMessage]);
 
   const runAgent = useCallback(
     (key: AgentKey) => {
@@ -461,19 +456,10 @@ export default function Home() {
       const task = state.task.trim();
       if (!task) return;
 
-      if (!userEmail) {
+      if (!signedIn) {
         updateAgent(key, {
           status: "idle",
           error: "Sign in to use AgentForge.",
-        });
-        return;
-      }
-
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        updateAgent(key, {
-          status: "idle",
-          error: "Not connected to backend. Is the server running?",
         });
         return;
       }
@@ -485,9 +471,21 @@ export default function Home() {
         primaryResponse: "",
         delegations: [],
       });
-      ws.send(JSON.stringify({ agent: key, task, user_email: userEmail }));
+      const outcome = socketRef.current?.enqueue({ agent: key, task }) ?? "not_connected";
+      if (outcome === "queued") return;
+      updateAgent(key, {
+        status: "idle",
+        error:
+          outcome === "too_large"
+            ? "That task is too long. Please shorten it and try again."
+            : socketStatus === "unauthenticated"
+              ? "Your session has expired. Please sign in again."
+              : socketStatus === "forbidden"
+                ? "You don't have access to this workspace."
+                : "Not connected to backend. Is the server running?",
+      });
     },
-    [agents, updateAgent, userEmail]
+    [agents, updateAgent, signedIn, socketStatus]
   );
 
   const connectionBadge = useMemo(
@@ -556,6 +554,12 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-2.5">
             <AuthButton />
             <ThemeToggle />
+            <Link
+              href="/studio"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-accent/60 bg-accent/10 px-4 py-2 text-sm font-semibold text-ink backdrop-blur transition-colors hover:border-accent hover:bg-accent/20"
+            >
+              ⌁ Studio
+            </Link>
             <Link
               href="/improve"
               className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
@@ -801,7 +805,7 @@ export default function Home() {
               <button
                 onClick={() => runAgent(selected)}
                 disabled={
-                  !userEmail ||
+                  !signedIn ||
                   selState.status === "running" ||
                   !selState.task.trim()
                 }
@@ -812,7 +816,7 @@ export default function Home() {
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Running…
                   </>
-                ) : !userEmail ? (
+                ) : !signedIn ? (
                   "Sign in to use AgentForge"
                 ) : (
                   "Run Agent"
