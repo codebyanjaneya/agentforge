@@ -164,6 +164,7 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId(); // one dialog per id: several dialogs live on one page, and a shared id would give every one the first dialog's title as its accessible name
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -171,8 +172,8 @@ export function ConfirmDialog({
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} className="st-dialog" aria-labelledby="st-dialog-title" onCancel={(event) => { event.preventDefault(); if (!busy) onCancel(); }}>
-      <h2 className="st-h2" id="st-dialog-title">
+    <dialog ref={ref} className="st-dialog" aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); if (!busy) onCancel(); }}>
+      <h2 className="st-h2" id={titleId}>
         {title}
       </h2>
       <div className="mt-3 text-sm leading-relaxed" style={{ color: "var(--st-ink-2)" }}>

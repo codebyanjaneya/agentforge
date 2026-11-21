@@ -89,7 +89,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
           </div>
         </aside>
         <div className="min-w-0">
-          <div className="st-topbar">
+          <header className="st-topbar">
             <Link href="/studio" className="st-brand">
               <span className="st-brand-mark" aria-hidden="true">
                 ⌁
@@ -99,7 +99,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
             <div className="flex items-center gap-2">
               <ThemeToggle />
             </div>
-          </div>
+          </header>
           <main className="st-main" id="main">
             {status === "loading" ? (
               <Skeleton lines={4} height="4rem" />
