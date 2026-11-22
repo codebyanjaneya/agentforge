@@ -42,6 +42,7 @@ export default function TemplatePage() {
     return (
       <div className="mx-auto max-w-4xl">
         <BackLink href="/studio/templates">Templates</BackLink>
+        <h1 className="sr-only">Template</h1>
         <div className="mt-4">{template.error ? <ErrorNotice error={template.error} onRetry={template.reload} /> : null}</div>
       </div>
     );

@@ -32,3 +32,22 @@ test("reduced motion is honoured in both style sheets", () => {
   assert.match(read("app/globals.css"), /prefers-reduced-motion: reduce/);
   assert.match(read("app/studio/studio.css"), /prefers-reduced-motion: reduce/);
 });
+
+test("the dependency graph is an image with a title and a text description of every dependency, a labelled keyboard-scrollable region, and state written as words", () => {
+  const graph = read("app/studio/_graph.tsx");
+  assert.match(graph, /role="img" aria-labelledby=\{`\$\{titleId\} \$\{descId\}`\}/);
+  assert.match(graph, /<desc id=\{descId\}>/);
+  assert.match(graph, /role="region" aria-label=\{`\$\{caption\}: scrollable`\} tabIndex=\{0\}/);
+  assert.match(graph, /pending: "Waiting"[\s\S]*succeeded: "Succeeded"[\s\S]*failed: "Failed"/, "every state has a word, not only a colour");
+  assert.match(read("app/studio/plans/[id]/page.tsx"), /<TaskGraph /);
+  assert.match(read("app/studio/runs/[id]/page.tsx"), /<TaskGraph /);
+});
+
+test("the sidebar names where you are working, groups the places, and the mobile bar keeps the account reachable under More", () => {
+  const layout = read("app/studio/layout.tsx");
+  assert.match(layout, /<WorkspaceSwitcher \/>/);
+  for (const group of ["Work", "Workforce", "Workspace"]) assert.match(layout, new RegExp(`label: "${group}"`));
+  assert.match(layout, /<details key={pathname} className="st-more">/);
+  assert.match(layout, /st-more-account/);
+  assert.match(read("app/studio/settings/page.tsx"), /<caption className="sr-only">[\s\S]*<th scope="col">Capability<\/th>/);
+});

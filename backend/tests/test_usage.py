@@ -29,15 +29,19 @@ def pricing():
 
 def test_cost_is_exact_decimal_rounded_half_up_once_per_request():
     p = pricing()
-    # 1M input at $0.15 + 1M output at $0.75 = $0.90 = 900000 micro-dollars
-    assert p.cost_micros("groq", "openai/gpt-oss-120b", 1_000_000, 1_000_000) == (900_000, "calculated")
+    # current version (2026-11-21, re-checked against the provider's model page): $0.15 in / $0.60 out per 1M. 1M + 1M = $0.75 = 750000 micro-dollars
+    assert p.cost_micros("groq", "openai/gpt-oss-120b", 1_000_000, 1_000_000) == (750_000, "calculated")
     assert p.cost_micros("groq", "openai/gpt-oss-120b", 0, 0) == (0, "calculated")
-    # 3 input tokens * 0.15 = 0.45 micro -> 0 ; 4 * 0.15 = 0.6 -> 1 ; 10 in + 10 out = 1.5 + 7.5 = 9 exactly
+    # 3 input tokens * 0.15 = 0.45 micro -> 0 ; 4 * 0.15 = 0.6 -> 1 ; 10 in + 10 out = 1.5 + 6.0 = 7.5 -> 8 (a half is rounded UP, never to even)
     assert p.cost_micros("groq", "openai/gpt-oss-120b", 3, 0)[0] == 0
     assert p.cost_micros("groq", "openai/gpt-oss-120b", 4, 0)[0] == 1
-    assert p.cost_micros("groq", "openai/gpt-oss-120b", 10, 10)[0] == 9
-    # a half is rounded UP (never to even): 10 output tokens of the 20b model = 5 micro; 1 * 0.5 = 0.5 -> 1
-    assert p.cost_micros("groq", "openai/gpt-oss-20b", 0, 1)[0] == 1
+    assert p.cost_micros("groq", "openai/gpt-oss-120b", 10, 10)[0] == 8
+    # 20b: $0.075 in / $0.30 out; 5 output tokens = 1.5 micro -> 2; 1 output token = 0.3 -> 0
+    assert p.cost_micros("groq", "openai/gpt-oss-20b", 0, 5)[0] == 2
+    assert p.cost_micros("groq", "openai/gpt-oss-20b", 0, 1)[0] == 0
+    # the previous version keeps its previous price ($0.75 out): rows calculated with it are never recalculated
+    assert p.cost_micros("groq", "openai/gpt-oss-120b", 10, 10, "2026-11-19")[0] == 9
+    assert p.cost_micros("groq", "openai/gpt-oss-120b", 1_000_000, 1_000_000, "2026-11-19") == (900_000, "calculated")
 
 
 def test_missing_usage_and_missing_price_are_never_turned_into_a_cost():

@@ -29,11 +29,11 @@ assert (BACKEND / "alembic.ini").exists(), "run from backend/"
 sys.path.insert(0, str(BACKEND))
 
 MAX_REQUESTS = 3  # the expected shape is 2 (tool call, then the final answer); a third is the margin, never more
-MAX_TOKENS = 400  # per request, completion side
+MAX_TOKENS = 800  # per request, completion side (a reasoning model's hidden reasoning tokens count against it)
 REQUEST_TIMEOUT = 30.0
 RUN_TIMEOUT = 90.0
-COST_CEILING_USD = Decimal("0.01")
-ASSUMED_PRICE = (Decimal("0.59"), Decimal("0.79"))  # USD per 1M tokens (input, output): an ESTIMATE for the cost ceiling only, not verified against the provider's price list
+COST_CEILING_USD = Decimal("0.02")  # the owner authorised at most $0.05 in total; the ceiling stops further requests long before that
+ASSUMED_PRICE = (Decimal("0.15"), Decimal("0.60"))  # USD per 1M tokens (input, output) for openai/gpt-oss-120b, from console.groq.com/docs/model/openai/gpt-oss-120b (2026-11-21); the provider's own invoice is the authority
 OBJECTIVE = "Use the math.calculate tool to compute 17*23, then reply with the number and one short sentence."
 EXPECTED = "391"
 
@@ -47,6 +47,11 @@ def main() -> int:
 
     values = {} if dry else dotenv_values(BACKEND / ".env")
     key, model = ("dry-run", "dry-run-model") if dry else (values.get("GROQ_API_KEY") or "", values.get("MODEL_NAME") or "")
+    from agentplatform.pricing import price_of
+
+    if not dry and model and price_of("groq", model) is None:
+        print(json.dumps({"blocker": f"refusing: model {model!r} has no configured price, so the cost ceiling could not be enforced"}))
+        return 3
     if not key or not model:
         print(json.dumps({"blocker": "GROQ_API_KEY or MODEL_NAME is not set in backend/.env"}))
         return 3

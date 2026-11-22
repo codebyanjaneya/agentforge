@@ -287,6 +287,13 @@ class PlanStore:
                 raise PlanNotFound("not found") from None
             raise PlanConflict(latest) from None
 
+    def require_owner(self, scope, plan_id) -> None:
+        """Raise PlanNotFound unless the caller CREATED the plan (the write rule). Cheap and read-only: callers that do other work first (validation reads the plan
+        under the caller's own agent catalogue) call it before that work, so a non-creator is told "not found" and nothing else."""
+        scope = require_scope(scope)
+        with self._sessions() as session:
+            self._plan(session, scope, plan_id, write=True)
+
     def approve(self, scope, plan_id, revision: int) -> PlanView:
         scope = require_scope(scope)
         now = datetime.utcnow()
@@ -398,6 +405,7 @@ class PlanningService:
                 "warnings": warnings, "levels": [list(level) for level in view.current.levels]}
 
     def approve(self, scope, plan_id, revision: int) -> PlanView:
+        self.store.require_owner(scope, plan_id)  # ownership BEFORE validation: a non-creator never learns how the plan validates for them
         report = self.validate(scope, plan_id)
         if report["revision"] == revision and report["errors"] and report["status"] != "cancelled":
             raise PlanInvalid(report["errors"], report["warnings"])

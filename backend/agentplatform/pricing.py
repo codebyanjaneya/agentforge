@@ -9,10 +9,14 @@ Amounts are integer MICRO-DOLLARS (millionths of a US dollar), computed with exa
 
 from decimal import ROUND_HALF_UP, Decimal
 
-PRICING_VERSION = "2026-11-19"
+PRICING_VERSION = "2026-11-21"  # 2026-11-21: re-checked against console.groq.com/docs/model/openai/gpt-oss-120b (output $0.60, not $0.75); the older version is kept so old rows are never recalculated
 
 # version -> {(provider, model): (input USD per 1M tokens, output USD per 1M tokens)}
 PRICES = {
+    "2026-11-21": {
+        ("groq", "openai/gpt-oss-120b"): (Decimal("0.15"), Decimal("0.60")),
+        ("groq", "openai/gpt-oss-20b"): (Decimal("0.075"), Decimal("0.30")),
+    },
     "2026-11-19": {
         ("groq", "openai/gpt-oss-120b"): (Decimal("0.15"), Decimal("0.75")),
         ("groq", "openai/gpt-oss-20b"): (Decimal("0.10"), Decimal("0.50")),

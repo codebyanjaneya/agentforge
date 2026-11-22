@@ -315,8 +315,8 @@ class ToolStore:
     def get(self, scope, invocation_id) -> InvocationView:
         scope = require_scope(scope)
         with self._sessions() as session:
-            row = session.execute(select(ToolInvocation).where(ToolInvocation.id == invocation_id, ToolInvocation.user_id == scope.user_id,
-                                                               ToolInvocation.workspace_id == scope.workspace_id)).scalar_one_or_none()
+            # READ access is workspace-wide (shared-read policy): an admin who must reconcile or approve has to SEE a teammate's tool call; WRITING stays with the starter
+            row = session.execute(select(ToolInvocation).where(ToolInvocation.id == invocation_id, ToolInvocation.workspace_id == scope.workspace_id)).scalar_one_or_none()
             if row is None:
                 raise InvocationNotFound("not found")
             return _view(row)
@@ -327,7 +327,7 @@ class ToolStore:
         scope = require_scope(scope)
         if type(limit) is not int or not 1 <= limit <= PAGE_MAX:
             raise ValueError("invalid_limit")
-        query = select(ToolInvocation).where(ToolInvocation.user_id == scope.user_id, ToolInvocation.workspace_id == scope.workspace_id)
+        query = select(ToolInvocation).where(ToolInvocation.workspace_id == scope.workspace_id)  # workspace-wide read (see get)
         for column, value in ((ToolInvocation.run_id, run_id), (ToolInvocation.execution_id, execution_id), (ToolInvocation.tool_id, tool_id),
                               (ToolInvocation.agent_key, agent_key), (ToolInvocation.status, status)):
             if value is not None:
@@ -346,7 +346,7 @@ class ToolStore:
         scope = require_scope(scope)
         with self._sessions() as session:
             rows = session.execute(select(ToolInvocation.tool_id, ToolInvocation.tool_version, func.count(), func.max(ToolInvocation.created_at))
-                                   .where(ToolInvocation.user_id == scope.user_id, ToolInvocation.workspace_id == scope.workspace_id, ToolInvocation.status != "rejected")
+                                   .where(ToolInvocation.workspace_id == scope.workspace_id, ToolInvocation.status != "rejected")
                                    .group_by(ToolInvocation.tool_id, ToolInvocation.tool_version)).all()
             return {(tool, version): {"calls": n, "last_used": last} for tool, version, n, last in rows}
 

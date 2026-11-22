@@ -41,6 +41,7 @@ export default function ApprovalDetailPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <BackLink href="/studio/approvals">Approvals</BackLink>
+        <h1 className="sr-only">Approval request</h1>
         <div className="mt-4">{error ? <LoadFailure error={error} onRetry={refresh} /> : null}</div>
       </div>
     );
@@ -121,7 +122,7 @@ export default function ApprovalDetailPage() {
             {item.reason ? (
               <blockquote className="st-quote">
                 {item.reason}
-                <footer className="st-muted text-xs">In the agent’s own words. It is not verified and grants nothing.</footer>
+                <footer className="st-quote-note text-xs">In the agent’s own words. It is not verified and grants nothing.</footer>
               </blockquote>
             ) : (
               <p className="st-muted m-0 mt-1 text-sm">The agent gave no explanation for this step.</p>

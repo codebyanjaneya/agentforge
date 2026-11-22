@@ -273,6 +273,26 @@ def test_plans_are_shared_for_reading_inside_a_workspace_writable_only_by_their_
         world["svc"].store.get(world["sa"], team_plan.id)  # the same person's PERSONAL workspace sees nothing of the team's plans
 
 
+def test_a_non_creator_is_told_not_found_before_the_plan_is_validated_for_them(world, monkeypatch):
+    """Found by the browser acceptance run: approve() validated the plan under the CALLER's agent catalogue first, so a teammate (or the owner) approving somebody else's plan got a
+    409 plan_invalid about agents they do not have, instead of the 404 every other write gets. Ownership is now checked first; the creator still gets the validation answer."""
+    from agentplatform.plans import PlanInvalid
+
+    team = team_workspace(world["db"], world["a"], [(world["b"], "member")])
+    owner = authorize_memory_scope(world["sf"], world["a"], team)
+    member = authorize_memory_scope(world["sf"], world["b"], team)
+    plan = create(world, scope=owner, objective="Plan the quarterly planning offsite for the team.")
+
+    def failing_validation(scope, plan_id):
+        return {"revision": 1, "errors": [{"code": "agent_unavailable", "task": "a", "message": "not yours"}], "warnings": [], "status": "draft"}
+
+    monkeypatch.setattr(world["svc"], "validate", failing_validation)
+    with pytest.raises(PlanNotFound):
+        world["svc"].approve(member, plan.id, 1)  # not the creator: not found, and nothing about validation leaks
+    with pytest.raises(PlanInvalid):
+        world["svc"].approve(owner, plan.id, 1)  # the creator still hears why it cannot be approved
+
+
 # ------------------------------------------------------------------------------------------------ retrieval, listing
 
 def test_retrieval_returns_tasks_dependencies_and_levels_in_a_stable_order(world):

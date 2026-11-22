@@ -9,6 +9,7 @@ import type { RunDetail } from "@/lib/studio/types";
 import { RUN_STATUS, attention, duration, explainError, explainTask, isTerminalRun, runActions, summarizeRun, type Explained } from "@/lib/studio/view";
 import { RunStages } from "../../_run";
 import { useMyEmail } from "../../_me";
+import { TaskGraph } from "../../_graph";
 import { byTask } from "@/lib/studio/tools";
 import { approvalsByTask } from "@/lib/studio/approvals";
 import { RunHistory } from "../../_approvals";
@@ -135,6 +136,7 @@ export default function RunPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <BackLink href="/studio/runs">Runs</BackLink>
+        <h1 className="sr-only">Run</h1>
         <div className="mt-4">{error ? <ErrorNotice error={error} onRetry={refresh} /> : <Skeleton />}</div>
       </div>
     );
@@ -273,6 +275,7 @@ export default function RunPage() {
               <span className="text-sm">The task is suspended at that step and saved, so it survives a restart. Tasks that do not depend on it keep going. Nothing sensitive runs until you decide, and only that exact call runs afterwards.</span>
             </Notice>
           ) : null}
+          <TaskGraph caption="Dependency graph of this run, with each task's current state" tasks={run.tasks.map((t) => ({ id: t.id, title: t.title, depends_on: t.depends_on, level: t.level, state: t.status }))} />
           <RunStages run={run} now={now} tools={byTask(toolCalls.data?.items ?? [])} approvals={approvalsByTask(approvals.data?.items ?? [])} />
         </div>
       </Section>

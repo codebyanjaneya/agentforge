@@ -24,11 +24,11 @@ const STUDIO = [...walk("app/studio"), ...walk("lib/studio")];
 const PAGES = STUDIO.filter((f) => f.endsWith("page.tsx"));
 
 test("the Studio has every planned route and page", () => {
-  for (const route of ["studio", "studio/agents", "studio/agents/new", "studio/agents/[id]", "studio/templates", "studio/templates/[id]", "studio/plans", "studio/plans/[id]", "studio/runs", "studio/runs/[id]", "studio/tools", "studio/tools/[id]", "studio/tools/activity", "studio/approvals", "studio/approvals/[id]", "studio/team"]) {
+  for (const route of ["studio/settings", "studio/join", "studio", "studio/agents", "studio/agents/new", "studio/agents/[id]", "studio/templates", "studio/templates/[id]", "studio/plans", "studio/plans/[id]", "studio/runs", "studio/runs/[id]", "studio/tools", "studio/tools/[id]", "studio/tools/activity", "studio/approvals", "studio/approvals/[id]", "studio/team"]) {
     assert.ok(existsSync(path.join(FRONTEND, "app", route, "page.tsx")), `app/${route}/page.tsx`);
   }
   assert.ok(existsSync(path.join(FRONTEND, "app/studio/layout.tsx")));
-  assert.equal(PAGES.length, 17); // sprint 5: + /studio/join (invitation acceptance)
+  assert.equal(PAGES.length, 18); // sprint 5: + /studio/join (invitation acceptance); sprint 6: + /studio/settings
    // + M6: /studio/team;  // + M4-B: /studio/tools, /studio/tools/[id], /studio/tools/activity; + M4-C: /studio/approvals, /studio/approvals/[id]
 });
 

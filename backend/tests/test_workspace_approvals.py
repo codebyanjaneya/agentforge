@@ -123,6 +123,12 @@ def test_the_shared_inbox_owner_and_admin_decide_a_member_only_inspects_a_strang
                 break
             time.sleep(0.1)
         assert body["status"] == "succeeded" and len(fixtures.OUTBOX) == 1
+        # found by the browser acceptance run: the admin (who must approve and reconcile) and the member must SEE the tool calls of a run another member started; the list used to be per-user and came back empty
+        for who in (ADMIN, MEMBER):
+            calls = req(papi, "GET", f"/plan-runs/{run['id']}/tool-invocations", who, wid).json()["items"]
+            assert "demo.send_note" in {c["tool"]["id"] for c in calls} and len(calls) >= 2, who  # the run's real tool calls, not an empty list
+            assert req(papi, "GET", f"/tool-invocations/{calls[0]['id']}", who, wid).status_code == 200
+        assert req(papi, "GET", f"/plan-runs/{run['id']}/tool-invocations", OUTSIDER, wid).status_code == 403  # still invisible to a stranger
         # a second decision (by the owner) on the same approval cannot change anything
         assert req(papi, "POST", f"/approvals/{aid}/approve", OWNER, wid).status_code == 409
         assert req(papi, "POST", f"/approvals/{aid}/reject", OWNER, wid).status_code == 409

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { Activity, Gauge, LayoutTemplate, ListChecks, ShieldCheck, UserPlus, Users, Wrench, type LucideIcon } from "lucide-react";
+import { Activity, Ellipsis, Gauge, LayoutTemplate, ListChecks, Plus, Settings, ShieldCheck, UserPlus, Users, Wrench, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { AuthButton } from "../auth-button";
 import { ThemeToggle } from "../theme-toggle";
@@ -12,16 +12,40 @@ import { Skeleton } from "./_ui";
 import { useInboxCount, WorkspaceSwitcher } from "./_team";
 import "./studio.css";
 
-const NAV: { href: string; label: string; Icon: LucideIcon; exact?: boolean }[] = [
-  { href: "/studio", label: "Overview", Icon: Gauge, exact: true },
-  { href: "/studio/plans", label: "Plans", Icon: ListChecks },
-  { href: "/studio/runs", label: "Runs", Icon: Activity },
-  { href: "/studio/approvals", label: "Approvals", Icon: ShieldCheck },
-  { href: "/studio/agents", label: "Agents", Icon: Users },
-  { href: "/studio/tools", label: "Tools", Icon: Wrench },
-  { href: "/studio/templates", label: "Templates", Icon: LayoutTemplate },
-  { href: "/studio/team", label: "Team", Icon: UserPlus },
+type NavItem = { href: string; label: string; Icon: LucideIcon; exact?: boolean };
+
+/** The product has three kinds of place: where work happens, who does it and with what, and who may. The sidebar says so instead of listing eight peers. */
+const GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Work",
+    items: [
+      { href: "/studio", label: "Overview", Icon: Gauge, exact: true },
+      { href: "/studio/plans", label: "Plans", Icon: ListChecks },
+      { href: "/studio/runs", label: "Runs", Icon: Activity },
+      { href: "/studio/approvals", label: "Approvals", Icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Workforce",
+    items: [
+      { href: "/studio/agents", label: "Agents", Icon: Users },
+      { href: "/studio/tools", label: "Tools", Icon: Wrench },
+      { href: "/studio/templates", label: "Templates", Icon: LayoutTemplate },
+    ],
+  },
+  {
+    label: "Workspace",
+    items: [
+      { href: "/studio/team", label: "Team", Icon: UserPlus },
+      { href: "/studio/settings", label: "Settings", Icon: Settings },
+    ],
+  },
 ];
+const ALL = GROUPS.flatMap((g) => g.items);
+const PRIMARY_MOBILE = ALL.slice(0, 4); // the four places used all day; everything else (and the account) lives under "More"
+const MORE_MOBILE = ALL.slice(4);
+
+const isActive = (item: NavItem, pathname: string) => (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -49,7 +73,24 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
   );
 }
 
+function NavLink({ item, pathname, pending }: { item: NavItem; pathname: string; pending: number }) {
+  const { href, label, Icon } = item;
+  return (
+    <Link href={href} aria-current={isActive(item, pathname) ? "page" : undefined}>
+      <Icon size={16} aria-hidden="true" />
+      <span>{label}</span>
+      {href === "/studio/approvals" && pending > 0 ? (
+        <span className="st-count" data-testid="inbox-badge">
+          {pending}
+          <span className="sr-only"> {pending === 1 ? "approval is" : "approvals are"} waiting</span>
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function Frame({ children, pathname, pending, status }: { children: ReactNode; pathname: string; pending: number; status: string }) {
+  const here = ALL.find((item) => isActive(item, pathname));
   return (
     <div className="st">
       <div className="st-shell">
@@ -58,56 +99,60 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
             <span className="st-brand-mark" aria-hidden="true">
               ⌁
             </span>
-            AgentForge Studio
+            AgentForge
           </Link>
+          {status === "authenticated" ? <WorkspaceSwitcher /> : null}
           <nav className="st-nav" aria-label="Primary">
-            {NAV.map(({ href, label, Icon, exact }) => {
-              const active = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link key={href} href={href} aria-current={active ? "page" : undefined}>
-                  <Icon size={17} aria-hidden="true" />
-                  {label}
-                  {href === "/studio/approvals" && pending > 0 ? (
-                    <span className="st-count" data-testid="inbox-badge">
-                      {pending}
-                      <span className="sr-only"> {pending === 1 ? "approval is" : "approvals are"} waiting</span>
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
+            {GROUPS.map((group) => (
+              <div key={group.label} className="st-nav-group" role="group" aria-label={group.label}>
+                <div className="st-nav-label" aria-hidden="true">
+                  {group.label}
+                </div>
+                {group.items.map((item) => (
+                  <NavLink key={item.href} item={item} pathname={pathname} pending={pending} />
+                ))}
+              </div>
+            ))}
           </nav>
-          <div className="st-side-foot mt-auto grid gap-3">
-            {status === "authenticated" ? <WorkspaceSwitcher /> : null}
-            <Link href="/" className="st-muted text-xs no-underline hover:underline">
-              ← Classic dashboard
-            </Link>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-            </div>
+          <div className="st-side-foot">
             <AuthButton />
+            <div className="st-side-tools">
+              <ThemeToggle />
+              <Link href="/" className="st-muted text-xs no-underline hover:underline">
+                Classic dashboard
+              </Link>
+            </div>
           </div>
         </aside>
         <div className="min-w-0">
           <header className="st-topbar">
-            <Link href="/studio" className="st-brand">
+            <Link href="/studio" className="st-brand st-brand-compact">
               <span className="st-brand-mark" aria-hidden="true">
                 ⌁
               </span>
-              Studio
+              AgentForge
             </Link>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
+            <div className="st-crumb" aria-hidden="true">
+              {here?.label ?? "Studio"}
+            </div>
+            <div className="st-topbar-end">
+              {status === "authenticated" ? <DemoBanner /> : null}
+              {status === "authenticated" ? (
+                <Link href="/studio#objective" className="st-btn st-btn-primary st-btn-sm st-topbar-new" aria-label="New objective">
+                  <Plus size={15} aria-hidden="true" />
+                  <span>New objective</span>
+                </Link>
+              ) : null}
+              <span className="st-topbar-theme">
+                <ThemeToggle />
+              </span>
             </div>
           </header>
           <main className="st-main" id="main">
             {status === "loading" ? (
               <Skeleton lines={4} height="4rem" />
             ) : status === "authenticated" ? (
-              <>
-                <DemoBanner />
-                {children}
-              </>
+              children
             ) : (
               <div className="st-panel mx-auto mt-16 max-w-md p-8 text-center">
                 <div className="st-h2">Sign in to open the Studio</div>
@@ -120,6 +165,28 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
           </main>
         </div>
       </div>
+      <nav className="st-tabbar" aria-label="Studio, compact">
+        {PRIMARY_MOBILE.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} pending={pending} />
+        ))}
+        <details key={pathname} className="st-more">
+          <summary aria-label="More">
+            <Ellipsis size={16} aria-hidden="true" />
+            <span>More</span>
+          </summary>
+          <div className="st-more-sheet">
+            {MORE_MOBILE.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} pending={pending} />
+            ))}
+            <div className="st-more-account">
+              <AuthButton />
+              <Link href="/" className="st-muted text-xs no-underline hover:underline">
+                Classic dashboard
+              </Link>
+            </div>
+          </div>
+        </details>
+      </nav>
     </div>
   );
 }

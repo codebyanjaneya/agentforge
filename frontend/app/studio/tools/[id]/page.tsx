@@ -18,6 +18,7 @@ export default function ToolDetailPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <BackLink href="/studio/tools">Tools</BackLink>
+        <h1 className="sr-only">Tool</h1>
         <div className="mt-4">{error ? <ErrorNotice error={error} onRetry={reload} fallbackTitle="Couldn't load this tool" /> : null}</div>
       </div>
     );

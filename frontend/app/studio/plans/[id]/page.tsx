@@ -10,6 +10,7 @@ import { PLAN_STATUS, RUN_STATUS, explainError, planActions, relativeTime, type 
 import { PlanFindings, PlanStages } from "../../_plan";
 import { PlanEditor } from "../../_plan-editor";
 import { useMyEmail } from "../../_me";
+import { TaskGraph } from "../../_graph";
 import { BackLink, Badge, ConfirmDialog, EmptyState, ErrorNotice, Notice, PageHead, Section, Skeleton, Spinner, useLoader } from "../../_ui";
 
 type Dialog = null | "approve" | "start" | "cancel";
@@ -84,6 +85,7 @@ export default function PlanPage() {
     return (
       <div className="mx-auto max-w-4xl">
         <BackLink href="/studio/plans">Plans</BackLink>
+        <h1 className="sr-only">Plan</h1>
         <div className="mt-4">{plan.error ? <ErrorNotice error={plan.error} onRetry={plan.reload} /> : <Skeleton />}</div>
       </div>
     );
@@ -172,7 +174,10 @@ export default function PlanPage() {
               onCancel={() => setEditing(false)}
             />
           ) : (
-            <PlanStages tasks={shown.tasks} />
+            <>
+              <TaskGraph caption={`Dependency graph of revision ${shown.revision}`} tasks={shown.tasks.map((t) => ({ id: t.id, title: t.title, depends_on: t.depends_on, level: t.level, agent: t.agent.name }))} />
+              <PlanStages tasks={shown.tasks} />
+            </>
           )}
         </div>
         {customAgents.length && !editing ? (

@@ -107,6 +107,7 @@ export default function AgentPage() {
     return (
       <div className="mx-auto max-w-3xl">
         <BackLink href="/studio/agents">Agents</BackLink>
+        <h1 className="sr-only">Agent</h1>
         <div className="mt-4">{agent.error ? <ErrorNotice error={agent.error} onRetry={agent.reload} /> : <Skeleton />}</div>
       </div>
     );

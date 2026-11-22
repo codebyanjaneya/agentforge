@@ -63,9 +63,19 @@ export function WorkspaceSwitcher() {
       live = false;
     };
   }, []);
-  if (!items || items.length < 2) return null; // nothing to choose between
+  if (!items) return <div className="st-ws st-skel" aria-hidden="true" style={{ height: "3rem" }} />;
+  const here = items.find((w) => w.id === current) ?? items[0];
+  if (items.length < 2) {
+    // one workspace: nothing to choose between, but the person still sees WHERE they are and in what capacity
+    return (
+      <div className="st-ws" role="group" aria-label="Current workspace">
+        <div className="st-ws-name">{here ? (here.personal ? "Personal" : here.name) : "Workspace"}</div>
+        <div className="st-ws-role st-muted">{here ? `${here.role} · ${here.members} member${here.members === 1 ? "" : "s"}` : ""}</div>
+      </div>
+    );
+  }
   return (
-    <div className="st-field">
+    <div className="st-field st-ws">
       <label className="st-label" htmlFor="workspace-switcher">
         Workspace
       </label>
