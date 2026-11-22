@@ -243,3 +243,10 @@ export function useLoader<T>(load: () => Promise<T>, deps: readonly unknown[], e
   }, [enabled, reload, ...deps]);
   return { data, setData, error, loading, reload };
 }
+
+/** After a failed submit, move focus to the first invalid field: the error is otherwise off-screen and silent for keyboard and screen-reader users (WCAG 3.3.1). */
+export function useFocusFirstError(errors: Record<string, string>) {
+  useEffect(() => {
+    if (Object.keys(errors).length) document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [errors]);
+}

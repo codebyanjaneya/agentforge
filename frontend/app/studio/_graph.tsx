@@ -5,8 +5,8 @@ import { useId } from "react";
 /** One node of the dependency graph. `state` is a task-run status when the graph shows a run; omitted for a plan (nothing has happened yet). */
 export type GraphTask = { id: string; title: string; depends_on: string[]; level: number; state?: string; agent?: string };
 
-const NODE_W = 188;
-const NODE_H = 54;
+const NODE_W = 232;
+const NODE_H = 64;
 const GAP_X = 64;
 const GAP_Y = 16;
 const PAD = 8;
@@ -65,10 +65,10 @@ export function TaskGraph({ tasks, caption }: { tasks: GraphTask[]; caption: str
                 <title>{`${task.title}${state ? ` (${STATE_TEXT[state] ?? state})` : ""}`}</title>
                 <rect width={NODE_W} height={NODE_H} rx="4" className="st-graph-box" />
                 <rect width="4" height={NODE_H} rx="1" className="st-graph-stripe" />
-                <text x="14" y="21" className="st-graph-title">
+                <text x="14" y="27" className="st-graph-title">
                   {clip(task.title, 27)}
                 </text>
-                <text x="14" y="40" className="st-graph-sub">
+                <text x="14" y="48" className="st-graph-sub">
                   {state ? STATE_TEXT[state] ?? state : task.agent ? clip(task.agent, 28) : `Stage ${task.level + 1}`}
                 </text>
               </g>

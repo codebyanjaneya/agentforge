@@ -1222,3 +1222,29 @@ a.st-row:hover .st-row-title {
   font-size: 0.76rem;
   color: var(--st-ink-3);
 }
+
+/* ---------- Review fixes (visual acceptance) ---------- */
+.st-topbar-new { white-space: nowrap; flex: none; }
+aside .st-appr-row { grid-template-columns: 4px minmax(0, 1fr); row-gap: 0.45rem; align-items: start; }
+aside .st-appr-side { grid-column: 2; grid-auto-flow: column; justify-content: start; justify-items: start; align-items: center; gap: 0.6rem; }
+.st-appr-what { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.st-mono { overflow-wrap: anywhere; }
+.st-more-account { flex-wrap: wrap; }
+.st-more-account a { white-space: nowrap; }
+.st-graph-title { font-size: 13.5px; }
+.st-graph-sub { font-size: 12px; }
+
+@media (min-width: 640px) { .st-section-head .st-h2 { white-space: nowrap; } }
+
+/* Narrow phones (320-480): usage tables scroll instead of crushing their cells; stages and approval rows give their width back to the content. */
+.st-table-wrap .st-table { min-width: 30rem; }
+.st-table-wrap .st-table td, .st-table-wrap .st-table th { white-space: nowrap; }
+@media (max-width: 480px) {
+  .st-stage { padding-left: 2rem; }
+  .st-stage::before { left: 0.75rem; }
+  .st-node { width: 1.5rem; height: 1.5rem; font-size: 0.7rem; }
+  .st-task { padding: 0.7rem 0.7rem; }
+  .st-task-appr li { flex-wrap: wrap; }
+  .st-task-appr li > .min-w-0 { flex: 1 1 11rem; }
+  .st-task-appr li > .st-appr-mark { align-self: stretch; }
+}

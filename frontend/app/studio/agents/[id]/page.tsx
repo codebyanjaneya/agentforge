@@ -8,7 +8,7 @@ import { formFromDefinition, validateForm, type AgentForm } from "@/lib/studio/f
 import type { AgentDetail, VersionDetail } from "@/lib/studio/types";
 import { explainError, relativeTime, type Explained } from "@/lib/studio/view";
 import { AgentFields } from "../../_agent-form";
-import { BackLink, Badge, ConfirmDialog, EmptyState, ErrorNotice, Field, Notice, PageHead, Section, Skeleton, Spinner, useLoader } from "../../_ui";
+import { BackLink, Badge, ConfirmDialog, EmptyState, ErrorNotice, Field, Notice, PageHead, Section, Skeleton, Spinner, useFocusFirstError, useLoader } from "../../_ui";
 
 type Tab = "edit" | "versions";
 
@@ -21,6 +21,7 @@ export default function AgentPage() {
   const [form, setForm] = useState<AgentForm | null>(null);
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useFocusFirstError(errors);
   const [serverError, setServerError] = useState<Explained | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);

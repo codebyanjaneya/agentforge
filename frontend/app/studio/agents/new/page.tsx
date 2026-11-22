@@ -7,7 +7,7 @@ import { createAgentFlow } from "@/lib/studio/flows";
 import { blankForm, suggestSlug, validateForm, validateSlug, type AgentForm } from "@/lib/studio/forms";
 import { explainError, type Explained } from "@/lib/studio/view";
 import { AgentFields } from "../../_agent-form";
-import { BackLink, ErrorNotice, Field, PageHead, Spinner } from "../../_ui";
+import { BackLink, ErrorNotice, Field, PageHead, Spinner, useFocusFirstError } from "../../_ui";
 
 export default function NewAgentPage() {
   const router = useRouter();
@@ -16,6 +16,7 @@ export default function NewAgentPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useFocusFirstError(errors);
   const [serverError, setServerError] = useState<Explained | null>(null);
   const [busy, setBusy] = useState(false);
 

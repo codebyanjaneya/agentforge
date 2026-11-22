@@ -2,7 +2,7 @@
 
 The CATALOG (``/tools``) is the same for every user (trusted code) but is shown together with facts that belong to the caller's workspace: which of
 THEIR agents are permitted to use each tool (read from their pinned agent definitions) and how often the tools were really used. An invocation (``/tool-invocations``)
-is shown only to the user and workspace that owns it: another user's invocation is indistinguishable from an unknown one (404). Inputs and outputs are the
+is READABLE by every member of the workspace that owns it (the same shared-read rule as plans, runs and usage, flow.md 25.36); another workspace's invocation is indistinguishable from an unknown one (404). Nothing here writes. Inputs and outputs are the
 stored, redacted, bounded JSON; error text is fixed. Nothing here can run a tool: execution happens only inside an agent's execution (the runtime)."""
 
 import json

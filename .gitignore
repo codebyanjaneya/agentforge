@@ -22,3 +22,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 *.pem
+
+ops/e2e/.run/
+ops/e2e/node_modules/
+ops/e2e/out/
