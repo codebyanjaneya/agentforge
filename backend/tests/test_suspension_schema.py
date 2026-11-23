@@ -17,7 +17,7 @@ def db(tmp_path, monkeypatch):
 
 def test_the_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"] and script.get_revision(SUSPENSION).down_revision == APPROVALS
+    assert script.get_heads() == ["0018_agent_slug_per_user"] and script.get_revision(SUSPENSION).down_revision == APPROVALS
     text = (BACKEND / "migrations" / "versions" / "0013_suspension.py").read_text(encoding="utf-8")
     assert "tool_suspensions" in text and "downgrade" in text
 

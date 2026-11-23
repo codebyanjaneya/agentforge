@@ -396,7 +396,6 @@ export type DispatchView = {
   id: string;
   state: DispatchState;
   generation: number;
-  idempotency_key: string;
   external_ref: string | null;
   dispatch_started_at: string | null;
   completed_at: string | null;

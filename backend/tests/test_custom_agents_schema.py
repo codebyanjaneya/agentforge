@@ -52,7 +52,7 @@ def snapshot(db):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M2-B, M3-A, M3-B and M4-A1 sit on top of 0005
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M2-B, M3-A, M3-B and M4-A1 sit on top of 0005
     rev = script.get_revision(AGENTS)
     assert rev.revision == "0005_custom_agents" and rev.down_revision == OWNERSHIP
     assert rev.branch_labels == set() and rev.dependencies is None
@@ -101,7 +101,7 @@ def test_upgrade_adds_exactly_the_new_objects_and_keeps_every_existing_row(db, i
 def test_upgrade_from_an_empty_chain_reaches_the_same_schema(db, import_fresh):
     models = fresh_models(import_fresh)
     db.upgrade()
-    assert db.rows("SELECT version_num FROM alembic_version") == [("0017_invitations",)]
+    assert db.rows("SELECT version_num FROM alembic_version") == [("0018_agent_slug_per_user",)]
     assert db.rows("SELECT count(*) FROM custom_agents") == [(0,)]
     assert db.diffs(models.Base.metadata) == []
 

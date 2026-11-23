@@ -24,7 +24,7 @@
 
 1. Configuration gate: `python ../ops/check_config.py --profile staging` prints `CONFIG GATE PASSED`.
 2. Data stores up; `/ready` 200 on every instance; one authenticated `/metrics` scrape.
-3. `python -m alembic upgrade head`; `verify_schema_version`; confirm head `0017_invitations`.
+3. `python -m alembic upgrade head`; `verify_schema_version`; confirm head `0018_agent_slug_per_user`.
 4. Edge: `bash ops/edge_drill.sh` against the staging nginx config in a scratch environment, then the same checks with curl against the real hostnames (HTTP/1.1 WebSocket upgrade, 413, Host refusal, `/metrics` hidden, `X-Forwarded-For` overwritten).
 5. Monitoring: set `ALERT_WEBHOOK_URL` to the authorised receiver; deliver one TEST alert end to end; confirm de-duplication with two API processes; confirm the on-call route pages a person (D074 evidence). Deploy `ops/alerts/agentforge-alerts.yml` and an external uptime check.
 6. Backup: run `ops/backup_job.py`; confirm a verified restore and the two metrics; run the failed-restore variants.

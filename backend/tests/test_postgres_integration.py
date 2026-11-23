@@ -1240,7 +1240,7 @@ def test_adoption_path_reaches_the_ownership_head_and_legacy_rows_stay_unowned_o
     assert classify(pg_db).state == pf.MATCH
     command.stamp(alembic_env(pg_db), BASELINE)
     command.upgrade(alembic_env(pg_db), "head")
-    assert pg_db.rows("SELECT version_num FROM alembic_version") == [(HEAD,)] and HEAD == "0017_invitations"
+    assert pg_db.rows("SELECT version_num FROM alembic_version") == [(HEAD,)] and HEAD == "0018_agent_slug_per_user"
     assert verify_schema_version(pg_db.url) == HEAD
     assert pg_db.rows(legacy_sql) == legacy_rows  # legacy rows byte-identical
     assert pg_db.rows("SELECT user_id, workspace_id FROM agent_memories") == [(None, None)] * 2  # quarantined, never assigned
@@ -1567,7 +1567,7 @@ def test_custom_agents_migration_triggers_service_and_races_on_postgresql(pg_db,
         with engine.begin() as c:
             first = agent_row(c)
             version_row(c, first)
-        _rejected(engine, "uq_custom_agents_workspace_id_slug", lambda c: agent_row(c))
+        _rejected(engine, "uq_custom_agents_workspace_id_user_id_slug", lambda c: agent_row(c))
         _rejected(engine, "ck_custom_agents_status", lambda c: agent_row(c, slug="other", status="deleted"))
         # latest_version >= 1 is implied by the range check (current >= 1 AND current <= latest), so PostgreSQL names the range check
         _rejected(engine, "ck_custom_agents_current_version_range", lambda c: agent_row(c, slug="other", latest_version=0, current_version=0))

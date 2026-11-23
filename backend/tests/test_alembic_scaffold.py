@@ -79,7 +79,7 @@ def test_script_directory_loads_with_a_single_linear_head():
     script = ScriptDirectory.from_config(make_config())
     assert Path(script.dir).resolve() == MIGRATIONS.resolve()
     assert script.get_bases() == ["0001_baseline"]  # the T1-E baseline is the root of the chain
-    assert script.get_heads() == ["0017_invitations"]  # M4-A1 (0008: M3-B; 0007: M3-A; 0006: M2-B; 0005: M2-A; 0004: M1-C; 0003: M1-B; 0002: M1-A; baseline: T1-E)
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M4-A1 (0008: M3-B; 0007: M3-A; 0006: M2-B; 0005: M2-A; 0004: M1-C; 0003: M1-B; 0002: M1-A; baseline: T1-E)
     assert (MIGRATIONS / "script.py.mako").is_file()
 
 

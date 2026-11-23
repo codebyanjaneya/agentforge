@@ -55,12 +55,12 @@ def squash(sql: str) -> str:
 def test_revision_is_discoverable_stable_and_the_root():
     script = ScriptDirectory.from_config(real_config())
     assert script.get_bases() == [REVISION]  # still the only root
-    assert script.get_heads() == ["0017_invitations"]  # the baseline is no longer the head (M1-A, M1-B, M1-C, M2-A, M2-B, M3-A, M3-B, M4-A1)
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # the baseline is no longer the head (M1-A, M1-B, M1-C, M2-A, M2-B, M3-A, M3-B, M4-A1)
     rev = script.get_revision(REVISION)
     assert rev.revision == "0001_baseline" and rev.down_revision is None
     assert rev.branch_labels == set() and rev.dependencies is None
     assert [r.revision for r in script.walk_revisions()] == [
-        "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", "0003_workspaces", "0002_identity", REVISION]
+        "0018_agent_slug_per_user", "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", "0003_workspaces", "0002_identity", REVISION]
     assert script.get_revision("0002_identity").down_revision == REVISION
     assert script.get_revision("0003_workspaces").down_revision == "0002_identity"
     assert script.get_revision("0004_memory_ownership").down_revision == "0003_workspaces"

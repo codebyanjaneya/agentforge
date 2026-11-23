@@ -61,6 +61,16 @@ def start_launch(api, wid):
     return run.json(), pending[0], fixtures
 
 
+def _keys(value):
+    if isinstance(value, dict):
+        for k, v in value.items():
+            yield str(k)
+            yield from _keys(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from _keys(v)
+
+
 def cleanup():
     importlib.import_module("agentplatform.tools").default_registry()._tools.pop(("demo.send_note", 1), None)
 
@@ -128,6 +138,15 @@ def test_the_shared_inbox_owner_and_admin_decide_a_member_only_inspects_a_strang
             calls = req(papi, "GET", f"/plan-runs/{run['id']}/tool-invocations", who, wid).json()["items"]
             assert "demo.send_note" in {c["tool"]["id"] for c in calls} and len(calls) >= 2, who  # the run's real tool calls, not an empty list
             assert req(papi, "GET", f"/tool-invocations/{calls[0]['id']}", who, wid).status_code == 200
+        # D075: what a MEMBER can read about tool calls contains no credential and no internal protocol detail
+        import json as _json
+        from agentplatform.schema import _SECRET_PATTERNS
+        shared = [req(papi, "GET", f"/plan-runs/{run['id']}/tool-invocations", MEMBER, wid).json()]
+        shared += [req(papi, "GET", f"/tool-invocations/{c['id']}", MEMBER, wid).json() for c in shared[0]["items"]]
+        shared += [req(papi, "GET", "/tool-invocations", MEMBER, wid).json(), req(papi, "GET", "/reconciliations", MEMBER, wid).json()]
+        text = _json.dumps(shared)
+        assert not any(p.search(text) for p in _SECRET_PATTERNS), "a credential-shaped value is in a shared tool view"
+        assert not {"idempotency_key", "lease_token", "token", "password", "api_key", "secret", "authorization"} & {k.lower() for k in _keys(shared)}, "internal or secret field in a shared view"
         assert req(papi, "GET", f"/plan-runs/{run['id']}/tool-invocations", OUTSIDER, wid).status_code == 403  # still invisible to a stranger
         # a second decision (by the owner) on the same approval cannot change anything
         assert req(papi, "POST", f"/approvals/{aid}/approve", OWNER, wid).status_code == 409

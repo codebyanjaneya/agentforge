@@ -93,6 +93,9 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
   const here = ALL.find((item) => isActive(item, pathname));
   return (
     <div className="st">
+      <a href="#main" className="st-skip">
+        Skip to content
+      </a>
       <div className="st-shell">
         <aside className="st-side" aria-label="Studio">
           <Link href="/studio" className="st-brand">
@@ -148,7 +151,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
               </span>
             </div>
           </header>
-          <main className="st-main" id="main">
+          <main className="st-main" id="main" tabIndex={-1}>
             {status === "loading" ? (
               <Skeleton lines={4} height="4rem" />
             ) : status === "authenticated" ? (
@@ -169,7 +172,16 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
         {PRIMARY_MOBILE.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} pending={pending} />
         ))}
-        <details key={pathname} className="st-more">
+        <details
+          key={pathname}
+          className="st-more"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && event.currentTarget.open) {
+              event.currentTarget.open = false; // a disclosure closes on Escape and hands focus back to its button
+              event.currentTarget.querySelector("summary")?.focus();
+            }
+          }}
+        >
           <summary aria-label="More">
             <Ellipsis size={16} aria-hidden="true" />
             <span>More</span>

@@ -63,7 +63,7 @@ def test_an_unknown_outcome_is_shown_as_unknown_with_the_honest_flags_and_never_
     assert d["requires_reconciliation"] is True and d["performed"] is None  # we do NOT know: not False
     assert len(fixtures.OUTBOX) == 1  # the remote really received it exactly once
     detail = get(papi, f"/tool-invocations/{invocation['id']}").json()
-    assert detail["dispatch"]["state"] == "unknown" and detail["dispatch"]["idempotency_key"].startswith("af-")
+    assert detail["dispatch"]["state"] == "unknown" and "idempotency_key" not in detail["dispatch"]  # D075: internal protocol detail is never in a shared view
     task = [t for t in run["tasks"] if t["id"] == "announce"][0]
     assert task["retry"] == "reconcile"  # not "safe", not "uncertain": a distinct class that an acknowledgement cannot clear
     assert run["retry_options"]["allowed"] is False and run["retry_options"]["reason"] == "reconciliation_required" and run["retry_options"]["reconcile"] == ["announce"]

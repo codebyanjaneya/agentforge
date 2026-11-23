@@ -83,7 +83,7 @@ def exec_id(db, **kw):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M4-A1 and M4-A2 sit on top of 0008
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M4-A1 and M4-A2 sit on top of 0008
     rev = script.get_revision(RUNS)
     assert rev.down_revision == PLANS and rev.branch_labels == set() and rev.dependencies is None and len(RUNS) <= 32
     assert 'revision: str = "0008_plan_runs"' in VERSION_FILE.read_text(encoding="utf-8")

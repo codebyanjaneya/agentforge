@@ -35,7 +35,7 @@ def invocation(execution_id, seq=1, status="running", **o):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M4-C sits on top of 0011
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M4-C sits on top of 0011
     assert script.get_revision("0012_approvals").down_revision == TOOLS
     rev = script.get_revision(TOOLS)
     assert rev.down_revision == ORCH and rev.branch_labels == set() and rev.dependencies is None and len(TOOLS) <= 32

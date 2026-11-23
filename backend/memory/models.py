@@ -198,7 +198,7 @@ AGENT_VERSION_RESTORED_CHECK = "restored_from_version IS NULL OR (restored_from_
 
 class CustomAgent(Base):
     """A user-defined agent (M2-A). Owned by the (user_id, workspace_id) scope that created it; the pair always comes
-    from a trusted MemoryScope, never from a request. ``slug`` is the stable per-workspace key. The definition itself
+    from a trusted MemoryScope, never from a request. ``slug`` is the stable key within one (workspace, user): two members may each own an agent with the same slug (migration 0018). The definition itself
     lives in immutable ``custom_agent_versions`` rows: this row only tracks which versions exist (``latest_version``)
     and which one is current, plus the lifecycle status. Archiving flips ``status``; nothing is ever deleted."""
 
@@ -207,7 +207,7 @@ class CustomAgent(Base):
         PrimaryKeyConstraint("id", name="custom_agents_pkey"),
         ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_custom_agents_user_id_users"),
         ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], name="fk_custom_agents_workspace_id_workspaces"),
-        UniqueConstraint("workspace_id", "slug", name="uq_custom_agents_workspace_id_slug"),
+        UniqueConstraint("workspace_id", "user_id", "slug", name="uq_custom_agents_workspace_id_user_id_slug"),
         CheckConstraint(AGENT_STATUS_CHECK, name="ck_custom_agents_status"),
         CheckConstraint(AGENT_LATEST_VERSION_CHECK, name="ck_custom_agents_latest_version_positive"),
         CheckConstraint(AGENT_CURRENT_VERSION_CHECK, name="ck_custom_agents_current_version_range"),

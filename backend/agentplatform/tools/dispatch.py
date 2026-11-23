@@ -216,8 +216,9 @@ def dispatch_view(row: ToolDispatch, reconciliations=(), actors=None) -> dict:
     unknown = row.state == "unknown"
     reconciled = row.state.startswith("reconciled")
     last = reconciliations[-1] if reconciliations else None
+    # D075: the idempotency key is internal protocol detail and is NOT part of any shared view (the server uses it itself when it asks the remote)
     return {
-        "id": str(row.id), "state": row.state, "operation_key": row.operation_key[:16], "generation": row.generation, "idempotency_key": row.idempotency_key,
+        "id": str(row.id), "state": row.state, "operation_key": row.operation_key[:16], "generation": row.generation,
         "external_ref": row.external_ref, "dispatch_started_at": row.dispatch_started_at.isoformat() if row.dispatch_started_at else None,
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
         "outcome": "unknown" if unknown else "confirmed" if row.state in ("succeeded", "failed") else "reconciled" if reconciled else "not_sent" if row.state == "cancelled" else "in_flight",

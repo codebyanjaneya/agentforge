@@ -64,5 +64,66 @@ Owner objective -> plan (row checked) -> graph -> approve (explicit, revision re
 ## 5. Remaining blockers
 
 * No live-model success (needs a served `MODEL_NAME` and explicit approval); no real Resend send (D073); no real alert receiver (D074); no human screen-reader pass.
-* The starter-workforce slug collision in shared workspaces (section 2).
-* Owner decisions: D075 (shared-read policy), whether members may see tool inputs/outputs.
+* (resolved 2026-11-23, see section 6) the starter-workforce slug collision.
+* (D075 accepted in principle 2026-11-23, wording awaits final confirmation).
+
+---
+
+# Update 2026-11-23: the remaining gaps, the starter-workforce fix, D075
+
+Same evidence level as above: real browser, real app and backend, isolated throw-away stack (`ops/e2e/`), scripted model, simulated send. No live-model call, no email, no staging or production access, no deployment. Google sign-in and production authentication are untouched (the harness only mints cookies for its own throw-away secret; no application auth code changed).
+
+## 6. The starter-workforce defect: resolution
+
+**Cause (found by reading the ownership model first).** `custom_agents` rows are private to `(user_id, workspace_id)`: every read and every `resolve` filters on both. Only the slug uniqueness (`UNIQUE (workspace_id, slug)`) and the "slug taken" check were workspace-wide. The first member to add the starter workforce took the three slugs; for everyone else the insert hit the constraint, `POST /starter-workforce` answered 200 with `created: false` for all three, they had no agents, and planning answered "add the starter workforce" (a loop).
+
+**Fix (D076).** Migration `0018_agent_slug_per_user`: `UNIQUE (workspace_id, slug)` becomes `UNIQUE (workspace_id, user_id, slug)`. A pure relaxation: existing rows satisfy it, nothing is rewritten, no agent changes owner, **no personal agent becomes visible to anyone else**. The duplicate check uses the same scope. The 200-agent cap is now per user so one member cannot exhaust it for the others. `downgrade()` refuses (changing nothing) while two users of a workspace share a slug.
+
+**Verified.**
+
+| Check | Result |
+|---|---|
+| Migration on SQLite (rebuild with foreign keys deferred): agents and versions identical after upgrade, second user's same slug allowed, same user's refused, FK to the rebuilt table survives, models equal the migrated schema, downgrade refusal and recovery | 3 tests pass |
+| Same migration on **PostgreSQL 16** (disposable container, token-marked, port 54399): old constraint name refused before, new name after, data untouched, downgrade refused with the clash and unchanged, downgrade and re-upgrade after removing it | passes |
+| Eight members of one workspace add the same three slugs at the same instant (24 threads, barrier) | no error, each has exactly their own three, 24 rows |
+| Per-user cap: the owner reaching the cap does not lock the member out | passes |
+| Browser/API: owner, admin and member add the workforce simultaneously (all `created: true`, 3 each, distinct ids, a second call `created: false` and no duplicates); another member clicks "Add the starter workforce" in the UI and then generates a plan; a member can neither list nor open another member's agent (404) | pass |
+
+## 7. Remaining browser acceptance gaps (second harness suite `journeys2.mjs`: 13/13)
+
+| Journey | How it was driven | Result |
+|---|---|---|
+| **Unknown-outcome reconciliation** | the simulated send is slowed (harness-only launcher, application code untouched); an admin approves in the browser; once the dispatch is in flight the API process is **hard-killed and restarted**; after recovery the call is `unknown`, the run is **not** reported as succeeded, a member sees "Outcome unknown" and "Only a workspace owner or admin can reconcile" (API 403); "Ask the remote service" leaves it unknown and records the attempt; the admin then records "NOT performed" with evidence, which the ledger labels as a person's statement; the owner can retry | pass |
+| **Plan revision editor** | edit an *approved* plan in the UI: revision 2 saved, approval withdrawn, revision 1 kept in the history; an invalid edit is refused with a visible error and no revision is created; a member cannot edit someone else's plan | pass |
+| **Wrong-email invitation** | a person signed in with another e-mail clicks "Join workspace": "This invitation can't be used", no membership; the invited e-mail can still join afterwards | pass |
+| **Role change and removal** | the owner changes a member to admin and back in the UI (backend role verified each time; the admin can read approvals); the owner removes a member: their API access ends at once (403), the UI shows no workspace data; the owner cannot be removed | pass |
+| **Notification timing** | the admin's already-open page: the inbox badge appeared 0.8 s and 1.3 s after the approval existed in two runs (limit asserted: 20 s; the documented poll is 15 s) and fell 0.3 s after the decision | pass |
+
+**A defect found and fixed here (reconciliation).** The simulated remote keeps its records in process memory. After the very crash that creates an unknown outcome it has forgotten every key, yet its answer "no record" was read as proof that nothing was sent (`not_found` plus remote idempotency means confirmed failed), which would allow a retry and a duplicate send. It now answers `unknown` for a key it does not remember (it can still confirm what it remembers) and its delivery text says so. A real remote that retains keys is unaffected by this change; `email.send@1` has no lookup at all.
+
+## 8. Accessibility
+
+**Fresh axe-core 4.10.2 scan** (`axe.mjs`; tags wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa): 18 pages plus agent form with errors, plan editor, confirm dialog open, team page with a pending invitation and (mobile) the open More sheet; dark and light themes; 1280, 390 and 320 px. **136 scans, 0 violations.** The scanner was sanity-checked: it reports `button-name`, `color-contrast` and `image-alt` on injected defects.
+
+**Keyboard-only regression** (`keyboard.mjs`, Tab/Enter/Space/Escape/arrows only): **9/9** after two fixes.
+
+| Check | Result |
+|---|---|
+| Every Tab stop on the overview shows a focus ring and is on screen; nav, New objective and the objective box reachable; no positive tabindex | pass |
+| **No skip link** (the first stop was the brand link; about 12 stops before the content) | **fixed**: "Skip to content" is the first stop and the target `main` takes focus (WCAG 2.4.1) |
+| Plan approval by keyboard: Approve opens the dialog, focus moves into it, the page behind is inert (past the last button focus goes to the browser UI, never to a page element), Escape closes and returns focus to the trigger, Enter confirms | pass |
+| Agent form: Enter submits; focus lands on the first invalid field | pass |
+| Team role select operable with the arrow keys | pass |
+| Approval decided with Space on "Reject this action" | pass |
+| Mobile More sheet: Enter opens it, its links follow in order | pass |
+| **The More sheet ignored Escape** | **fixed**: Escape closes it and returns focus to the "More" button |
+
+**Still not done:** no human screen-reader pass (NVDA, VoiceOver); axe and keyboard checks do not replace it. `docs/accessibility.md` keeps the manual script.
+
+## 9. D075 (shared tool reads): what was verified, what changed
+
+Recorded in `decision.md` as **D075**, status *accepted in principle by the owner, wording awaiting final confirmation*, with the exact policy and trade-offs. While writing it the shared view was audited: the **dispatch idempotency key was returned to every member**. It is internal protocol detail the UI never used, so it was removed from every shared view. A test now scans everything a member can read about tool calls for credential-shaped values and internal field names. Redaction remains pattern-based best effort (stated in D075). The permission matrix in section 4 stands.
+
+## 10. Honest limits of this evidence
+
+Scripted model, simulated send, SQLite for the browser stack (PostgreSQL only for the backend suites). The crash is a hard kill of one API process, not an infrastructure failure. Notification timing was measured on an idle local machine. Nothing here is a live-model, real-email, staging or production result.

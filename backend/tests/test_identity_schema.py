@@ -120,13 +120,13 @@ def parity_diffs(db: Db, metadata):
 
 def test_revision_graph_is_baseline_then_identity():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # later revisions sit on top of 0002_identity
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # later revisions sit on top of 0002_identity
     assert script.get_bases() == [BASELINE_REVISION]
     rev = script.get_revision(IDENTITY)
     assert rev.revision == "0002_identity" and rev.down_revision == "0001_baseline"
     assert rev.branch_labels == set() and rev.dependencies is None
     assert [r.revision for r in script.walk_revisions()] == [
-        "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", "0003_workspaces", IDENTITY, BASELINE_REVISION]
+        "0018_agent_slug_per_user", "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", "0003_workspaces", IDENTITY, BASELINE_REVISION]
     assert Path(rev.path).resolve() == VERSION_FILE.resolve()
     assert len(IDENTITY) <= 32  # alembic_version.version_num is VARCHAR(32)
 

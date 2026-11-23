@@ -17,7 +17,7 @@ test("every confirmation dialog gets its OWN title id (a shared id gave every di
 test("the mobile top bar is a landmark (header), so no content sits outside a region at narrow widths", () => {
   const layout = read("app/studio/layout.tsx");
   assert.match(layout, /<header className="st-topbar">/);
-  assert.match(layout, /<main className="st-main" id="main">/);
+  assert.match(layout, /<main className="st-main" id="main" tabIndex={-1}>/);
   assert.ok(!/<div className="st-topbar">/.test(layout));
 });
 
@@ -47,7 +47,9 @@ test("the sidebar names where you are working, groups the places, and the mobile
   const layout = read("app/studio/layout.tsx");
   assert.match(layout, /<WorkspaceSwitcher \/>/);
   for (const group of ["Work", "Workforce", "Workspace"]) assert.match(layout, new RegExp(`label: "${group}"`));
-  assert.match(layout, /<details key={pathname} className="st-more">/);
+  assert.match(layout, /<details\s+key={pathname}\s+className="st-more"\s+onKeyDown=[\s\S]*?"Escape"/);
+  assert.match(layout, /href="#main" className="st-skip"/);
+  assert.match(layout, /id="main" tabIndex=\{-1\}/);
   assert.match(layout, /st-more-account/);
   assert.match(read("app/studio/settings/page.tsx"), /<caption className="sr-only">[\s\S]*<th scope="col">Capability<\/th>/);
 });

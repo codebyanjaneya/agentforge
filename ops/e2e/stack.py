@@ -25,6 +25,28 @@ def up(url: str) -> bool:
         return getattr(exc, "code", None) is not None  # an HTTP error still means a server answered
 
 
+def _spawn_api(py, env, slow=False):
+    cmd = [str(py), str(Path(__file__).resolve().parent / "slow_main.py"), str(API_PORT)] if slow else [str(py), "-m", "uvicorn", "main:app", "--port", str(API_PORT)]
+    return subprocess.Popen(cmd, cwd=ROOT / "backend", env=env, stdout=open(RUN / "api.log", "a"), stderr=subprocess.STDOUT)
+
+
+def restart_api() -> None:
+    """Hard-kill ONLY the API process this script started and start it again (normal speed, same database and keys): a real crash and recovery for the journeys."""
+    pids = json.loads((RUN / "pids.json").read_text())
+    subprocess.run(["taskkill", "/F", "/T", "/PID", str(pids["api"])], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) if os.name == "nt" else os.kill(pids["api"], 9)
+    time.sleep(1)
+    py = ROOT / "backend" / "venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    p = _spawn_api(py, {**os.environ, **json.loads((RUN / "api.env.json").read_text())}, slow="--slow-send" in sys.argv)
+    pids["api"] = p.pid
+    (RUN / "pids.json").write_text(json.dumps(pids))
+    for _ in range(40):
+        if up(f"http://127.0.0.1:{API_PORT}/health"):
+            print("api restarted")
+            return
+        time.sleep(1)
+    sys.exit("api did not come back")
+
+
 def start() -> None:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -51,7 +73,8 @@ def start() -> None:
     if "--skip-build" not in sys.argv:
         subprocess.run([NPX, "next", "build"], cwd=ROOT / "frontend", env=web_env, check=True, stdout=subprocess.DEVNULL)
     procs = {}
-    procs["api"] = subprocess.Popen([str(py), "-m", "uvicorn", "main:app", "--port", str(API_PORT)], cwd=ROOT / "backend", env=backend_env, stdout=open(RUN / "api.log", "w"), stderr=subprocess.STDOUT)
+    (RUN / "api.env.json").write_text(json.dumps({k: v for k, v in backend_env.items() if k in ("APP_ENV", "AGENTFORGE_DEMO_MODE", "GROQ_API_KEY", "DATABASE_URL", "AUTH_JWT_PUBLIC_KEYS", "AUTH_CONFIG_REQUIRED", "CORS_ALLOWED_ORIGINS", "LOG_FORMAT", "TOKEN_ISSUE_PER_MINUTE", "PROVIDER_CONCURRENCY")}))
+    procs["api"] = _spawn_api(py, backend_env, slow="--slow-send" in sys.argv)
     procs["web"] = subprocess.Popen([NPX, "next", "start", "-p", str(WEB_PORT)], cwd=ROOT / "frontend", env=web_env, stdout=open(RUN / "web.log", "w"), stderr=subprocess.STDOUT)
     (RUN / "pids.json").write_text(json.dumps({k: p.pid for k, p in procs.items()}))
     for _ in range(60):
@@ -68,9 +91,9 @@ def stop() -> None:
         for pid in json.loads(f.read_text()).values():  # only the pids this script started
             subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)] if os.name == "nt" else ["kill", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         f.unlink()
-    for name in ("config.json", "web.env.json"):  # the throw-away secrets go with the stack
+    for name in ("config.json", "web.env.json", "api.env.json"):  # the throw-away secrets go with the stack
         (RUN / name).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
-    {"start": start, "stop": stop}[sys.argv[1]]()
+    {"start": start, "stop": stop, "restart-api": restart_api}[sys.argv[1]]()

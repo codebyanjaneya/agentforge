@@ -46,7 +46,9 @@ def lookup_note(idempotency_key: str) -> tuple:
     """Reconciliation: ask the simulated remote whether it accepted this idempotency key. (status, external reference, evidence)."""
     if idempotency_key in REMOTE:
         return "succeeded", REMOTE[idempotency_key], "The simulated remote service has a record of this idempotency key."
-    return "not_found", None, "The simulated remote service has no record of this idempotency key."
+    # Found by the browser acceptance run (kill the process mid-send, restart, ask): REMOTE lives in THIS process's memory, so after the very crash that makes an outcome unknown it has forgotten
+    # every key, and "not_found" would be read as PROOF that nothing was sent, which allows a duplicate send. A memory-only simulation can confirm what it remembers and nothing more.
+    return "unknown", None, "The simulated remote keeps its records in memory only: after a restart it cannot say that nothing was sent, so this stays unresolved. Record your own decision."
 
 
 DEMO_SEND_NOTE = ToolSpec(
@@ -56,7 +58,7 @@ DEMO_SEND_NOTE = ToolSpec(
                 "needs a human approval of that exact call. It performs no real delivery and has no network access; it only returns a deterministic receipt.",
     input_model=SendNoteIn, output_model=SendNoteOut, risk="external", side_effect="non_idempotent", timeout_seconds=2.0, max_output_bytes=1000,
     capabilities=("approval-demo",), retry_policy="never", remote_idempotency=True, external_ref_field="receipt",
-    delivery="SIMULATED. AgentForge sends at most once automatically; the simulated remote also deduplicates by idempotency key and can be queried, so an unknown outcome can be reconciled from its record.",
+    delivery="SIMULATED. AgentForge sends at most once automatically; the simulated remote also deduplicates by idempotency key and can be queried, so an unknown outcome can be reconciled from its record WHEN it still remembers the send (it keeps records in memory only: after a restart it cannot say that nothing happened, and the outcome then needs a person's decision).",
     limitations=("SIMULATED: nothing is delivered and nothing leaves AgentForge.", "A real tool of this kind could not be undone once it ran.", "Needs a human approval for every single call."),
     example={"recipient": "customer@example.com", "subject": "Your launch date", "body": "Hello, the launch is confirmed for next week."})
 

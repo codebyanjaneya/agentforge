@@ -77,12 +77,12 @@ def add_user_and_workspace(db: Db):
 
 def test_revision_graph_ends_with_memory_ownership():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M2-A, M2-B, M3-A, M3-B and M4-A1 sit on top of 0004_memory_ownership
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M2-A, M2-B, M3-A, M3-B and M4-A1 sit on top of 0004_memory_ownership
     assert script.get_bases() == [BASELINE]
     rev = script.get_revision(OWNERSHIP)
     assert rev.revision == "0004_memory_ownership" and rev.down_revision == "0003_workspaces"
     assert rev.branch_labels == set() and rev.dependencies is None
-    assert [r.revision for r in script.walk_revisions()] == ["0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", OWNERSHIP, WORKSPACES, IDENTITY, BASELINE]
+    assert [r.revision for r in script.walk_revisions()] == ["0018_agent_slug_per_user", "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", OWNERSHIP, WORKSPACES, IDENTITY, BASELINE]
     assert Path(rev.path).resolve() == VERSION_FILE.resolve()
     assert len(OWNERSHIP) <= 32  # alembic_version.version_num is VARCHAR(32)
 
@@ -377,7 +377,7 @@ def _classify(url):
 def test_unversioned_baseline_database_still_matches_the_frozen_baseline(tmp_path):
     report = _classify(_make_unversioned(tmp_path, baseline_metadata(), "base.db"))
     assert report.state == pf.MATCH and report.exit_code == 10 and report.findings == ()
-    assert report.target == "0001_baseline (frozen baseline schema, NOT the current head 0017_invitations)"
+    assert report.target == "0001_baseline (frozen baseline schema, NOT the current head 0018_agent_slug_per_user)"
 
 
 def test_current_head_schema_without_a_version_table_is_still_divergent(tmp_path, import_fresh):

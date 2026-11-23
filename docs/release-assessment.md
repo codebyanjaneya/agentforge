@@ -66,3 +66,20 @@ The configured model name is the blocker, not the platform: `llama-3.3-70b-versa
 ## What would change the verdict
 
 STAGING-READY becomes **production-ready** only when, in authorised environments: the staging runbook has been executed with measured RTO/RPO; D073 and D074 have their external evidence and the owner has confirmed them; a live-model run has passed within a spending cap; a human screen-reader pass has been recorded; and the owner accepts the remaining limits above.
+
+
+## Update 2026-11-23: visual and browser acceptance, starter-workforce fix
+
+**Verdict unchanged: STAGING-READY. NOT PRODUCTION-READY.** Everything below is category A (local, throw-away stack, scripted model, simulated send, and GitHub Actions). B and C are still empty.
+
+| Area | Evidence added |
+|---|---|
+| Starter workforce for every member | defect found by the browser run (second member got no agents); fixed by migration `0018_agent_slug_per_user` (D076); SQLite and PostgreSQL 16 migration tests, 24-thread concurrent onboarding, browser journey |
+| Browser acceptance | 36 journey steps pass (suite 1: 23, suite 2: 13) covering all roles, revision editor, wrong-e-mail invitation, role change and removal, notification timing, and **unknown-outcome reconciliation after a hard kill of the API process** |
+| Accessibility | fresh axe: 136 scans, 0 violations (dark and light, 1280/390/320 px, interactive states); keyboard-only 9/9 after adding a skip link and Escape on the More sheet; **still no screen-reader test** |
+| Tool-call sharing (D075) | accepted in principle by the owner; idempotency key removed from shared views; a test scans member-visible tool views for credentials and internal fields; redaction remains pattern-based |
+| Defect in the simulated remote | after a crash it said "no record", read as proof nothing was sent (duplicate send on retry); now answers unknown |
+
+**Remaining blockers (unchanged by this update):** no successful live-model run (needs a served `MODEL_NAME` and approval); D073 (real Resend sandbox send) and D074 (real receiver, on-call, edge) pending; no human screen-reader pass; no staging run; the owner's final confirmation of D075's wording; owner transfer and an e-mailed invitation remain unbuilt.
+
+**Test results for this update (final tree before commit).** Backend, one pytest process per file, 85 files: **1,453 passed, 0 failed**, 82 skipped (all env-gated: 76 PostgreSQL, 5 real-Redis, 1 by design); PostgreSQL 16 (disposable container, token-marked, port 54399, removed afterwards): `test_postgres_integration` + `test_invitations_postgres` **76 passed, 0 failed** (includes the new 0018 migration test; one existing 0017 test was corrected because it assumed 0017 was the head). Frontend: `tsc`, `eslint`, **162 passed, 0 failed**. Browser (isolated stack): suite 1 **23/23**, suite 2 **13/13**, keyboard **9/9**, axe **136 scans, 0 violations**. GitHub Actions for the commit that carries this update: see the final report.

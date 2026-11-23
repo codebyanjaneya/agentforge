@@ -24,7 +24,7 @@ def event_sql(**o):
 
 def test_graph_column_table_triggers_and_a_clean_downgrade_that_keeps_the_plan_task_triggers(db):
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"] and script.get_revision(HEAD).down_revision == PREV
+    assert script.get_heads() == ["0018_agent_slug_per_user"] and script.get_revision(HEAD).down_revision == PREV
     db.upgrade(PREV)
     before = db.master()
     triggers = sorted(r[0] for r in db.rows("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'plan_tasks'"))

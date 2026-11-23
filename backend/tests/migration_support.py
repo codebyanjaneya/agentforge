@@ -107,6 +107,10 @@ class Db:
         try:
             with engine.connect() as conn:
                 skip = {"alembic_version", *exclude_tables}
+                try:
+                    before_0018 = conn.exec_driver_sql("SELECT version_num FROM alembic_version").scalar() != "0018_agent_slug_per_user"
+                except Exception:  # noqa: BLE001 - no version table yet
+                    before_0018 = False
 
                 def include(obj, name, type_, reflected, compare_to):
                     if type_ == "table" and name in skip:
@@ -115,6 +119,8 @@ class Db:
                         return False  # the indexes of a skipped (not yet created) table
                     if type_ == "column" and name == "required_tool" and "provider_events" in skip:
                         return False  # 0015 adds plan_tasks.required_tool: a database from before it (provider_events excluded) does not have it yet
+                    if before_0018 and type_ == "unique_constraint" and getattr(getattr(obj, "table", None), "name", None) == "custom_agents":
+                        return False  # 0018 changed this constraint (workspace, slug) -> (workspace, user, slug): a database from before it legitimately differs from the live models
                     if exclude_ownership and (is_ownership_object(obj, name, type_) or is_agent_platform_object(obj, name, type_)):
                         return False
                     return True

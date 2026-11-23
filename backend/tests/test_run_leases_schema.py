@@ -26,7 +26,7 @@ def snapshot(db):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M4-A2 sits on top of 0009
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M4-A2 sits on top of 0009
     rev = script.get_revision(LEASES)
     assert rev.down_revision == RUNS and rev.branch_labels == set() and rev.dependencies is None and len(LEASES) <= 32
     text = VERSION_FILE.read_text(encoding="utf-8")

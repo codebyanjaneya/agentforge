@@ -105,6 +105,7 @@ def test_agents_are_isolated_between_users(world):
 def test_the_same_user_in_another_workspace_cannot_see_an_agent(world):
     from tests.test_authz_memory import team_workspace
     from authz.workspaces import authorize_memory_scope
+    from authz.workspaces import authorize_memory_scope
 
     agent = world["svc"].create(world["sa"], "mine", definition())
     team = team_workspace(world["db"], world["a"])
@@ -120,6 +121,7 @@ def test_agents_stay_private_to_their_creator_even_inside_a_shared_workspace(wor
     other's agents (workspace-wide sharing would be a separate, explicit decision)."""
     from authz.workspaces import authorize_memory_scope
     from tests.test_authz_memory import team_workspace
+    from authz.workspaces import authorize_memory_scope
 
     team = team_workspace(world["db"], world["a"], [(world["b"], "member")])
     sf = world["db"].session_factory
@@ -133,7 +135,11 @@ def test_agents_stay_private_to_their_creator_even_inside_a_shared_workspace(wor
         with pytest.raises(AgentNotFound):
             call()
     assert world["svc"].resolve(member_scope, "team-agent") is None
-    with pytest.raises(SlugTaken):  # the slug is unique per workspace, whoever created it
+    # 0018: a slug is unique per (workspace, user). The member may own an agent with the same slug; it stays private to them and the owner's agent is untouched.
+    mine = world["svc"].create(member_scope, "team-agent", definition(name="Member copy"))
+    assert mine.id != agent.id and [v.id for v in world["svc"].list_agents(member_scope)] == [mine.id] and [v.id for v in world["svc"].list_agents(owner_scope)] == [agent.id]
+    assert world["svc"].resolve(member_scope, "team-agent").version_id == mine.version.version_id and world["svc"].resolve(owner_scope, "team-agent").version_id == agent.version.version_id
+    with pytest.raises(SlugTaken):  # still unique for ONE user
         world["svc"].create(member_scope, "team-agent", definition())
 
 
@@ -353,3 +359,47 @@ def test_resolve_is_the_read_only_integration_point_for_execution(world):
     assert world["svc"].get_version(world["sa"], agent.id, 1)[1] == definition()
     assert world["db"].scalar("SELECT definition FROM custom_agent_versions WHERE id = :i", i=first.version_id.hex)
     assert world["svc"].resolve(world["sb"], "mine") is None  # another user's agent does not resolve
+
+
+def test_every_member_can_onboard_the_starter_workforce_concurrently_without_conflicts_or_cross_visibility(auth_db):  # noqa: F811
+    """0018: eight members of one workspace each add the same three starter slugs at the same moment: nobody is refused, nobody gets duplicates, nobody sees another's agents."""
+    from tests.test_authz_memory import team_workspace
+    from authz.workspaces import authorize_memory_scope
+    sf = auth_db.session_factory
+    people = [make_user(auth_db, f"m{i}@example.com")[0] for i in range(8)]
+    wid = team_workspace(auth_db, people[0], [(p, "member") for p in people[1:]])
+    svc = AgentService(sf)
+    scopes = [authorize_memory_scope(sf, p, wid) for p in people]
+    slugs = ("unit-economics-analyst", "launch-planner", "launch-comms")
+    errors, barrier = [], threading.Barrier(len(scopes) * len(slugs))
+
+    def onboard(scope, slug):
+        barrier.wait()
+        try:
+            svc.create(scope, slug, definition(name=slug))
+        except Exception as exc:  # noqa: BLE001
+            errors.append(repr(exc))
+
+    threads = [threading.Thread(target=onboard, args=(sc, sl)) for sc in scopes for sl in slugs]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert errors == []
+    for scope in scopes:
+        assert sorted(v.slug for v in svc.list_agents(scope)) == sorted(slugs)  # exactly its own three
+        assert all(svc.resolve(scope, slug) is not None for slug in slugs)
+    assert auth_db.scalar("SELECT count(*) FROM custom_agents") == len(scopes) * len(slugs)
+
+
+def test_the_agent_quota_is_per_user_not_per_workspace(world, monkeypatch):
+    from agentplatform import service as svc_module
+    from tests.test_authz_memory import team_workspace
+    from authz.workspaces import authorize_memory_scope
+    monkeypatch.setattr(svc_module, "MAX_AGENTS_PER_WORKSPACE", 2)
+    sf = world["db"].session_factory
+    team = team_workspace(world["db"], world["a"], [(world["b"], "member")])
+    owner_scope, member_scope = authorize_memory_scope(sf, world["a"], team), authorize_memory_scope(sf, world["b"], team)
+    world["svc"].create(owner_scope, "one-agent", definition())
+    world["svc"].create(owner_scope, "two-agent", definition())
+    with pytest.raises(LimitReached):
+        world["svc"].create(owner_scope, "three-agent", definition())
+    assert world["svc"].create(member_scope, "one-agent", definition()).slug == "one-agent"  # the owner reaching the cap does not lock the member out

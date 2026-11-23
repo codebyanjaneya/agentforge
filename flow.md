@@ -1762,3 +1762,20 @@ Verdict: **staging-ready, not production-ready** (`docs/release-assessment.md`).
 **Accessibility.** Two defects fixed (duplicate dialog title ids gave later dialogs the first dialog's accessible name; the mobile top bar was outside any landmark); 45 axe runs 0 violations; reflow, keyboard, dialog and reduced-motion checks pass. **Screen-reader testing was not performed**; the manual script is in `docs/accessibility.md`.
 
 **Live model (2026-11-21, one authorised run).** `ops/live_model_check.py` (one bounded task through the real run path, hard limits, key read in-process and never printed, throw-away database; `--dry-run` is tested in CI) was run once against the model configured in `backend/.env`, `llama-3.3-70b-versatile`: the provider refused it at the first request in 0.317 s with `unsupported_model`; run `4151bb01-862f-425a-b3f7-30a54e27a793` and task ended `failed`, 0 tokens, $0, no tool call, no side effect, no retry, no second run. **No live-model success is claimed.** The configured model is the blocker; details and the next step are in `docs/release-assessment.md`. D073 and D074 untouched.
+
+
+### 25.39 Visual acceptance, browser acceptance gaps, starter-workforce fix, D075/D076 (2026-11-22/23)
+
+Labels as in 25.36. Evidence is "verified in a real browser against the real app and backend in an isolated throw-away stack (`ops/e2e/`: throw-away ES256 keys and session secret, SQLite, scripted model, simulated send, ports 3040/8040)". No live-model call, no e-mail, no staging, no production, no deployment, `backend/.env` not edited, D046/D050 untouched, D073/D074 still pending. Full write-up: `docs/design-review-and-browser-acceptance.md`.
+
+**A. Design review.** 16 pages x 4 widths (1440, 1280, 390, 320), before and after, in `docs/screens/`. Fixed: the overview's "Waiting for you" card, the wrapping top-bar button, the small task graph, a 3 px overflow and crushed usage tables at 320 px, the suspended banner, the More sheet's account row, and the "Side effects" heading.
+
+**B. Starter-workforce defect (D076, migration 0018).** Agents are private per (user, workspace) but the slug was unique per workspace, so only the first member could ever get the starter agents (`created: false`, then planning failed). `UNIQUE (workspace_id, slug)` became `UNIQUE (workspace_id, user_id, slug)`; no row rewritten, no agent public; the 200-agent cap is per user. Tests: 3 SQLite migration tests, 24-thread concurrent onboarding, per-user cap, PostgreSQL 16 migration test (up, same-slug second user, downgrade refusal, re-upgrade), browser journey.
+
+**C. Browser journeys.** Suite 1 (23 steps) and suite 2 (13 steps) pass: owner, admin, member, plan creator, run starter and stranger roles; plan generation, DAG, revision editor, approval, run, cancel, retry (refused unacknowledged, accepted acknowledged); invitations including the wrong e-mail; role change and removal; agents; tools and dispatches; usage; settings; mobile navigation; session handling; and, new, **unknown-outcome reconciliation after a real hard kill of the API process** and **notification timing** (badge 0.8 s and 1.3 s after the request, 0.3 s to fall).
+
+**D. Defects found and fixed.** (1) No focus movement to the first invalid field after a failed agent-form submit. (2) No skip link; the More sheet ignored Escape. (3) The simulated remote answered "no record" after a crash and the platform read that as proof nothing was sent (a duplicate send on retry); it now answers unknown for a key it does not remember. (4) The dispatch idempotency key was returned to every member in shared tool views; removed (D075).
+
+**E. Accessibility.** Fresh axe 4.10.2: 136 scans (18 pages and 6 interactive states, dark and light, 1280/390/320 px) 0 violations; scanner sanity-checked. Keyboard-only 9/9. **No screen-reader test.**
+
+**F. D075.** Shared read of tool invocations accepted in principle by the owner; exact policy and trade-offs in `decision.md`, wording awaiting final confirmation.

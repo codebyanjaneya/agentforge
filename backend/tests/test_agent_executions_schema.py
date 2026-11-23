@@ -99,7 +99,7 @@ def migrated(db):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M3-A, M3-B and M4-A1 sit on top of 0006
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M3-A, M3-B and M4-A1 sit on top of 0006
     rev = script.get_revision(EXECUTIONS)
     assert rev.revision == "0006_agent_executions" and rev.down_revision == AGENTS
     assert rev.branch_labels == set() and rev.dependencies is None and len(EXECUTIONS) <= 32

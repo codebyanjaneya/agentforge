@@ -37,7 +37,7 @@ def seeded(db):
 
 def test_revision_graph_and_file_conventions():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # M4-B (0011) and M4-C (0012) sit on top of 0010
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # M4-B (0011) and M4-C (0012) sit on top of 0010
     rev = script.get_revision(ORCH)
     assert rev.down_revision == LEASES and rev.branch_labels == set() and rev.dependencies is None and len(ORCH) <= 32
     text = VERSION_FILE.read_text(encoding="utf-8")

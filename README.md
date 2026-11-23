@@ -22,7 +22,7 @@ backend/                 FastAPI modular monolith (Python 3.11)
   agentplatform/           plans, runs, tools, approvals, dispatch ledger, usage, coordination
   auth/, authz/            ES256 backend tokens, principals, workspace roles, invitations
   memory/                  SQLAlchemy models/repositories, legacy Redis short-term memory
-  migrations/              Alembic (head: 0017_invitations)
+  migrations/              Alembic (head: 0018_agent_slug_per_user)
   worker.py                durable run worker (python worker.py)
   tests/                   pytest suite (+ tests/ops load and failure drills)
 frontend/                Next.js 16 + NextAuth v4 (Studio in app/studio)

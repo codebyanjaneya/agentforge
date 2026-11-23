@@ -35,7 +35,7 @@ from agentplatform.schema import (
 from authz.scope import require_scope
 from memory.models import CustomAgent, CustomAgentVersion
 
-MAX_AGENTS_PER_WORKSPACE = 200  # active + archived (implementation default)
+MAX_AGENTS_PER_WORKSPACE = 200  # active + archived, PER USER within a workspace (implementation default; the name is historical)
 MAX_VERSIONS_PER_AGENT = 100  # implementation default
 
 
@@ -158,7 +158,7 @@ class AgentService:
         now = datetime.utcnow()
         try:
             with self._sessions() as session, session.begin():
-                total = session.execute(select(func.count()).select_from(CustomAgent).where(CustomAgent.workspace_id == scope.workspace_id)).scalar()
+                total = session.execute(select(func.count()).select_from(CustomAgent).where(*_owned(scope))).scalar()  # per user: one member cannot use up the quota of the others
                 if total >= MAX_AGENTS_PER_WORKSPACE:
                     raise LimitReached("agents")
                 agent = CustomAgent(
@@ -176,7 +176,7 @@ class AgentService:
                 return _view(agent, version)
         except IntegrityError:
             with self._sessions() as session:  # distinguish a taken slug from any other integrity failure
-                taken = session.execute(select(CustomAgent.id).where(CustomAgent.workspace_id == scope.workspace_id, CustomAgent.slug == slug)).first()
+                taken = session.execute(select(CustomAgent.id).where(*_owned(scope), CustomAgent.slug == slug)).first()
             if taken:
                 raise SlugTaken(slug) from None
             raise

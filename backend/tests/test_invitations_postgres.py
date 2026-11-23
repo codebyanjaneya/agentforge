@@ -268,7 +268,7 @@ def test_migration_0017_chain_schema_indexes_downgrade_data_preservation_and_reu
     before = {t: pg_db.rows(f"SELECT count(*) FROM {t}")[0][0] for t in ("users", "workspaces", "workspace_memberships")}
 
     command.upgrade(cfg, "head")  # 0016 -> 0017
-    assert pg_db.rows("SELECT version_num FROM alembic_version") == [("0017_invitations",)]
+    assert pg_db.rows("SELECT version_num FROM alembic_version") == [("0018_agent_slug_per_user",)]
     assert {r[0] for r in pg_db.rows("SELECT conname FROM pg_constraint WHERE conrelid = 'workspace_invitations'::regclass")} >= {
         "workspace_invitations_pkey", "uq_workspace_invitations_token_hash", "ck_workspace_invitations_role", "ck_workspace_invitations_expiry",
         "ck_workspace_invitations_single_outcome", "ck_workspace_invitations_acceptor", "fk_workspace_invitations_workspace_id_workspaces",
@@ -278,10 +278,46 @@ def test_migration_0017_chain_schema_indexes_downgrade_data_preservation_and_reu
     assert {t: pg_db.rows(f"SELECT count(*) FROM {t}")[0][0] for t in before} == before  # existing data untouched
 
     made = create_invitation(sf, owner, team, "nina@example.com", "member")
-    command.downgrade(cfg, "-1")  # drops only the new table (pending invitations are lost: documented)
+    command.downgrade(cfg, "0016_durable_dispatch")  # 0018 then 0017: drops the invitations table (pending invitations are lost: documented)
     assert pg_db.rows("SELECT to_regclass('workspace_invitations')") == [(None,)]
     assert {t: pg_db.rows(f"SELECT count(*) FROM {t}")[0][0] for t in before} == before
     command.upgrade(cfg, "head")
     assert pg_db.rows("SELECT count(*) FROM workspace_invitations") == [(0,)]
     again = create_invitation(sf, owner, team, "nina@example.com", "member")
     assert again["token"] != made["token"]
+
+
+def test_migration_0018_slug_unique_per_user_preserves_agents_and_downgrade_refuses_on_clash(pg_db, alembic_env):  # noqa: F811
+    from sqlalchemy.exc import IntegrityError
+    cfg = alembic_env(pg_db)
+    command.upgrade(cfg, "0017_invitations")
+    sf = sessionmaker(bind=create_engine(pg_db.url), expire_on_commit=False)
+    db = SimpleNamespace(session_factory=sf)
+    owner, _ = make_user(db, "owner@example.com")
+    member, _ = make_user(db, "member@example.com")
+    team = team_workspace(db, owner, [(member, "member")])
+
+    def agent(user, aid=None, slug="launch-comms"):
+        pg_db.run(f"INSERT INTO custom_agents (id, user_id, workspace_id, slug, status, latest_version, current_version, created_at, updated_at) "
+                  f"VALUES ('{aid or uuid.uuid4()}','{user.user_id}','{team}','{slug}','active',1,1,now(),now())")
+
+    first = uuid.uuid4()
+    agent(owner, first)
+    with pytest.raises(Exception) as old_rule:  # before 0018 the slug is unique per workspace
+        agent(member)
+    assert "uq_custom_agents_workspace_id_slug" in str(old_rule.value)
+    command.upgrade(cfg, "head")
+    assert pg_db.rows("SELECT id FROM custom_agents") == [(first,)]  # the existing agent is untouched
+    agent(member)  # the member now owns the same slug
+    with pytest.raises(Exception) as same_user:
+        agent(owner)
+    assert "uq_custom_agents_workspace_id_user_id_slug" in str(same_user.value)
+    with pytest.raises(Exception) as refused:  # two users share a slug: the old rule cannot be restored, nothing changes
+        command.downgrade(cfg, "0017_invitations")
+    assert "same slug" in str(refused.value)
+    assert pg_db.rows("SELECT version_num FROM alembic_version") == [("0018_agent_slug_per_user",)] and pg_db.rows("SELECT count(*) FROM custom_agents") == [(2,)]
+    pg_db.run("DELETE FROM custom_agents WHERE user_id = '%s'" % member.user_id)
+    command.downgrade(cfg, "0017_invitations")
+    assert {r[0] for r in pg_db.rows("SELECT conname FROM pg_constraint WHERE conrelid = 'custom_agents'::regclass")} >= {"uq_custom_agents_workspace_id_slug"}
+    command.upgrade(cfg, "head")
+    assert pg_db.rows("SELECT id FROM custom_agents") == [(first,)]

@@ -53,12 +53,12 @@ def squash(text: str) -> str:
 
 def test_revision_graph_is_baseline_identity_workspaces():
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"]  # later revisions (M1-C, M2-A, M2-B, M3-A, M3-B, M4-A1) sit on top of 0003_workspaces
+    assert script.get_heads() == ["0018_agent_slug_per_user"]  # later revisions (M1-C, M2-A, M2-B, M3-A, M3-B, M4-A1) sit on top of 0003_workspaces
     assert script.get_bases() == [BASELINE]
     rev = script.get_revision(WORKSPACES)
     assert rev.revision == "0003_workspaces" and rev.down_revision == "0002_identity"
     assert rev.branch_labels == set() and rev.dependencies is None
-    assert [r.revision for r in script.walk_revisions()] == ["0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", WORKSPACES, IDENTITY, BASELINE]
+    assert [r.revision for r in script.walk_revisions()] == ["0018_agent_slug_per_user", "0017_invitations", "0016_durable_dispatch", "0015_resilience_required_action", "0014_usage_notifications", "0013_suspension", "0012_approvals", "0011_tools", "0010_orchestration", "0009_run_leases", "0008_plan_runs", "0007_plans", "0006_agent_executions", "0005_custom_agents", "0004_memory_ownership", WORKSPACES, IDENTITY, BASELINE]
     assert Path(rev.path).resolve() == VERSION_FILE.resolve()
     assert len(WORKSPACES) <= 32  # alembic_version.version_num is VARCHAR(32)
 

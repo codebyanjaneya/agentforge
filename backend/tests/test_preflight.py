@@ -138,8 +138,8 @@ def test_known_non_head_revision_is_distinct_from_current(tmp_path):
 
 
 def test_real_script_directory_knows_the_revision_chain():
-    assert pf.known_revisions() == ({"0017_invitations"}, {
-        "0001_baseline", "0002_identity", "0003_workspaces", "0004_memory_ownership", "0005_custom_agents", "0006_agent_executions", "0007_plans", "0008_plan_runs", "0009_run_leases", "0010_orchestration", "0011_tools", "0012_approvals", "0013_suspension", "0014_usage_notifications", "0015_resilience_required_action", "0016_durable_dispatch", "0017_invitations"})
+    assert pf.known_revisions() == ({"0018_agent_slug_per_user"}, {
+        "0001_baseline", "0002_identity", "0003_workspaces", "0004_memory_ownership", "0005_custom_agents", "0006_agent_executions", "0007_plans", "0008_plan_runs", "0009_run_leases", "0010_orchestration", "0011_tools", "0012_approvals", "0013_suspension", "0014_usage_notifications", "0015_resilience_required_action", "0016_durable_dispatch", "0017_invitations", "0018_agent_slug_per_user"})
 
 
 def test_exit_codes_are_the_approved_mapping():

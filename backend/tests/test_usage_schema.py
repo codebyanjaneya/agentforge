@@ -36,7 +36,7 @@ def rejected(db, sql):
 
 def test_graph_and_upgrade_adds_exactly_two_tables_and_downgrade_removes_them(db):
     script = ScriptDirectory.from_config(make_cfg())
-    assert script.get_heads() == ["0017_invitations"] and script.get_revision(HEAD).down_revision == PREV
+    assert script.get_heads() == ["0018_agent_slug_per_user"] and script.get_revision(HEAD).down_revision == PREV
     db.upgrade(PREV)
     before = db.master()
     db.upgrade(HEAD)

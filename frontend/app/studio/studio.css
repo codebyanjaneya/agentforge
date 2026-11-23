@@ -1248,3 +1248,8 @@ aside .st-appr-side { grid-column: 2; grid-auto-flow: column; justify-content: s
   .st-task-appr li > .min-w-0 { flex: 1 1 11rem; }
   .st-task-appr li > .st-appr-mark { align-self: stretch; }
 }
+
+/* Skip link (WCAG 2.4.1): the first Tab stop on every Studio page; invisible until it has focus. */
+.st-skip { position: absolute; left: 0.75rem; top: -4rem; z-index: 100; padding: 0.6rem 1rem; border-radius: 0.4rem; background: var(--st-ember); color: #111; font-weight: 600; text-decoration: none; }
+.st-skip:focus { top: 0.75rem; }
+.st-main:focus { outline: none; }
