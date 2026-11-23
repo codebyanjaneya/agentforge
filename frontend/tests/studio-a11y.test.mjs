@@ -53,3 +53,10 @@ test("the sidebar names where you are working, groups the places, and the mobile
   assert.match(layout, /st-more-account/);
   assert.match(read("app/studio/settings/page.tsx"), /<caption className="sr-only">[\s\S]*<th scope="col">Capability<\/th>/);
 });
+
+test("a form Field ties its error or hint to the control, so a screen reader hears why a field is invalid", () => {
+  const ui = read("app/studio/_ui.tsx");
+  assert.match(ui, /cloneElement\([^)]*"aria-describedby": described/);
+  assert.match(ui, /id=\{`\$\{htmlFor\}-error`\}/);
+  assert.match(ui, /id=\{`\$\{htmlFor\}-hint`\}/);
+});

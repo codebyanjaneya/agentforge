@@ -4,7 +4,7 @@
 // never conveyed by colour alone.
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode, cloneElement, isValidElement, type ReactElement } from "react";
 import { signIn } from "next-auth/react";
 import { explainError, type Explained, type Tone } from "@/lib/studio/view";
 import type { PlanTaskAgent } from "@/lib/studio/types";
@@ -117,18 +117,23 @@ export function Spinner({ label }: { label?: string }) {
 }
 
 export function Field({ label, hint, error, children, htmlFor }: { label: string; hint?: ReactNode; error?: string; children: ReactNode; htmlFor: string }) {
+  // The error (or the hint) must be tied to the control, otherwise a screen reader announces "invalid" without saying why (WCAG 3.3.1, 4.1.2).
+  const described = error ? `${htmlFor}-error` : hint ? `${htmlFor}-hint` : undefined;
+  const control = described && isValidElement(children) ? cloneElement(children as ReactElement<{ "aria-describedby"?: string }>, { "aria-describedby": described }) : children;
   return (
     <div className="st-field">
       <label className="st-label" htmlFor={htmlFor}>
         {label}
       </label>
-      {children}
+      {control}
       {error ? (
         <div className="st-error-text" id={`${htmlFor}-error`}>
           {error}
         </div>
       ) : hint ? (
-        <div className="st-hint">{hint}</div>
+        <div className="st-hint" id={`${htmlFor}-hint`}>
+          {hint}
+        </div>
       ) : null}
     </div>
   );
