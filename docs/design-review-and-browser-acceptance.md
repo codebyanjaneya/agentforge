@@ -65,7 +65,7 @@ Owner objective -> plan (row checked) -> graph -> approve (explicit, revision re
 
 * No live-model success (needs a served `MODEL_NAME` and explicit approval); no real Resend send (D073); no real alert receiver (D074); no human screen-reader pass.
 * (resolved 2026-11-23, see section 6) the starter-workforce slug collision.
-* (D075 accepted in principle 2026-11-23, wording awaits final confirmation).
+* (D075 owner-confirmed 2026-11-23; no longer a blocker).
 
 ---
 
@@ -122,7 +122,7 @@ Same evidence level as above: real browser, real app and backend, isolated throw
 
 ## 9. D075 (shared tool reads): what was verified, what changed
 
-Recorded in `decision.md` as **D075**, status *accepted in principle by the owner, wording awaiting final confirmation*, with the exact policy and trade-offs. While writing it the shared view was audited: the **dispatch idempotency key was returned to every member**. It is internal protocol detail the UI never used, so it was removed from every shared view. A test now scans everything a member can read about tool calls for credential-shaped values and internal field names. Redaction remains pattern-based best effort (stated in D075). The permission matrix in section 4 stands.
+Recorded in `decision.md` as **D075**, status *Accepted (owner-confirmed 2026-11-23)*, earlier *accepted in principle*, with the exact policy and trade-offs. While writing it the shared view was audited: the **dispatch idempotency key was returned to every member**. It is internal protocol detail the UI never used, so it was removed from every shared view. A test now scans everything a member can read about tool calls for credential-shaped values and internal field names. Redaction remains pattern-based best effort (stated in D075). The permission matrix in section 4 stands.
 
 ## 10. Honest limits of this evidence
 

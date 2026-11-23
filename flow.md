@@ -1778,4 +1778,4 @@ Labels as in 25.36. Evidence is "verified in a real browser against the real app
 
 **E. Accessibility.** Fresh axe 4.10.2: 136 scans (18 pages and 6 interactive states, dark and light, 1280/390/320 px) 0 violations; scanner sanity-checked. Keyboard-only 9/9. **No screen-reader test.**
 
-**F. D075.** Shared read of tool invocations accepted in principle by the owner; exact policy and trade-offs in `decision.md`, wording awaiting final confirmation.
+**F. D075.** Shared read of tool invocations: accepted in principle by the owner, then **explicitly confirmed by the owner on 2026-11-23** (status Accepted, owner-confirmed) with the exact policy and trade-offs in `decision.md`. Confirmed: members read workspace-wide tool invocation history; writes stay with the authorised starter; approval and reconciliation stay with owners and admins; internal sensitive fields such as dispatch idempotency keys are not exposed in shared views; redaction is pattern-based best effort, not a guarantee. Documentation only: no implementation change; D046/D050 untouched; D073/D074 still pending.
