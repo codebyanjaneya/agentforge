@@ -215,7 +215,7 @@ export function RunHistory({ events }: { events: RunEvent[] }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
-        <p className="st-muted m-0 text-sm">{all ? "Every recorded event." : "Approvals, suspensions and recovery. Nothing here contains a value, only what happened."}</p>
+        <p className="st-muted m-0 text-sm">{all ? "Every recorded event." : "Approvals, suspensions and recovery. This history shows what happened, including the recorded actions and their details. Sensitive values are redacted where recognized, but redaction is not guaranteed to catch every one."}</p>
         <button className="st-btn st-btn-sm" onClick={() => setAll(!all)} aria-pressed={all}>
           {all ? "Show approvals only" : "Show every event"}
         </button>

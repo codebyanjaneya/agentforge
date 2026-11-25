@@ -47,5 +47,5 @@ export function nextAction(facts: HomeFacts): NextAction {
 export const CONTROL_LINES: { name: string; text: string }[] = [
   { name: "Runs by itself", text: "Read-only tools that only compute an answer: calculator, unit economics, dates, text and tables. They change nothing." },
   { name: "Asks you first", text: "Anything that could act outside AgentForge. The agent pauses, you see the exact tool, version and values, and you approve that one call or reject it." },
-  { name: "Always recorded", text: "Every task, tool call, approval and recovery is written to a history you can read afterwards. Nothing in it contains a secret value." },
+  { name: "Always recorded", text: "Every task, tool call, approval and recovery is written to a history you can read afterwards. Sensitive values are redacted where AgentForge recognizes them, but redaction is not guaranteed to catch every one." },
 ];

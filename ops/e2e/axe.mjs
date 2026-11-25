@@ -3,7 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { api, chromium, BROWSER, openAs, OUT, cfg } from "./lib.mjs";
+import { api, chromium, BROWSER, openAs, PEOPLE, OUT, cfg } from "./lib.mjs";
+PEOPLE.fresh = { sub: "e2e-fresh", email: "fresh@e2e.test", name: "Fiona Fresh" };
 
 const axeSource = fs.readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const seed = JSON.parse(fs.readFileSync(path.join(OUT, "seed.json")));
@@ -13,7 +14,7 @@ const agents = (await api("owner", "GET", "/agents", null, seed.workspace)).body
 const PAGES = { overview: "/studio", plans: "/studio/plans", plan: `/studio/plans/${c.done.plan}`, runs: "/studio/runs", "run-done": `/studio/runs/${c.done.run}`, "run-waiting": `/studio/runs/${c.waiting.run}`,
   "run-rejected": `/studio/runs/${c.rejected.run}`, agents: "/studio/agents", "agent-new": "/studio/agents/new", agent: `/studio/agents/${agents[0].id}`, templates: "/studio/templates", approvals: "/studio/approvals",
   approval: `/studio/approvals/${c.waiting.approval}`, tools: "/studio/tools", tool: "/studio/tools/demo.send_note", activity: "/studio/tools/activity", team: "/studio/team", settings: "/studio/settings" };
-const VIEWS = { d1280: { width: 1280, height: 800 }, m390: { width: 390, height: 844 }, n320: { width: 320, height: 640 } };
+const VIEWS = { d1440: { width: 1440, height: 900 }, d1280: { width: 1280, height: 800 }, m390: { width: 390, height: 844 }, n320: { width: 320, height: 640 } };
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const findings = []; let scans = 0;
 const browser = await chromium.launch({ executablePath: BROWSER });
@@ -54,6 +55,29 @@ for (const theme of ["dark", "light"]) {
       await scan(page, `${theme} ${vn} more-sheet-open`);
     }
     await ctx.close();
+    // P0 surfaces: the public landing page and sign-in (signed out), then a brand-new person's first-run overview, the checklist and the command palette
+    const anon = await browser.newContext({ viewport: vp });
+    const ap = await anon.newPage();
+    await ap.addInitScript((th) => { try { localStorage.setItem("agentforge-theme", th); } catch {} }, theme);
+    for (const [name, url] of [["landing", "/"], ["signin", "/signin"], ["signin-error", "/signin?error=AccessDenied"]]) {
+      await ap.goto(WEB + url, { waitUntil: "networkidle" });
+      await ap.waitForTimeout(300);
+      await scan(ap, `${theme} ${vn} ${name}`);
+    }
+    await anon.close();
+    const fresh = await openAs(browser, "fresh", vp, []);
+    await fresh.page.addInitScript((th) => { try { localStorage.setItem("agentforge-theme", th); } catch {} }, theme);
+    await fresh.page.goto(`${WEB}/studio`, { waitUntil: "networkidle" });
+    await fresh.page.waitForTimeout(400);
+    await scan(fresh.page, `${theme} ${vn} firstrun-overview`);
+    await fresh.page.getByRole("button", { name: /Use$|We are launching/ }).first().click().catch(() => {});
+    await scan(fresh.page, `${theme} ${vn} firstrun-example-picked`);
+    await fresh.page.keyboard.press("Control+k");
+    await fresh.page.waitForTimeout(300);
+    await scan(fresh.page, `${theme} ${vn} command-palette-open`);
+    await fresh.page.keyboard.type("zzzz");
+    await scan(fresh.page, `${theme} ${vn} command-palette-no-results`);
+    await fresh.ctx.close();
   }
 }
 await browser.close();

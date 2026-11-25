@@ -39,7 +39,8 @@ test("control is explained in three plain lines that match what the product real
   assert.deepEqual(home.CONTROL_LINES.map((l) => l.name), ["Runs by itself", "Asks you first", "Always recorded"]);
   assert.match(home.CONTROL_LINES[0].text, /Read-only tools/);
   assert.match(home.CONTROL_LINES[1].text, /exact tool, version and values/);
-  assert.match(home.CONTROL_LINES[2].text, /secret/);
+  assert.match(home.CONTROL_LINES[2].text, /redacted where AgentForge recognizes them/);
+  assert.match(home.CONTROL_LINES[2].text, /not guaranteed to catch every one/); // an accurate claim, not "nothing contains a secret"
 });
 
 test("demo status and the starter workforce are read and created through the typed client only", async () => {

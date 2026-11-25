@@ -3,7 +3,8 @@
 // reported as one. Needs a stack with seed.mjs + content.mjs. Writes the raw ARIA snapshots to out/a11y-tree/ as evidence.
 import fs from "node:fs";
 import path from "node:path";
-import { api, chromium, BROWSER, openAs, OUT, cfg } from "./lib.mjs";
+import { api, chromium, BROWSER, openAs, PEOPLE, OUT, cfg } from "./lib.mjs";
+PEOPLE.fresh = { sub: "e2e-fresh", email: "fresh@e2e.test", name: "Fiona Fresh" };
 
 const seed = JSON.parse(fs.readFileSync(path.join(OUT, "seed.json")));
 const c = JSON.parse(fs.readFileSync(path.join(OUT, "content.json")));
@@ -65,7 +66,7 @@ await step("4 dialog: native modal with an accessible name 'Approve revision N?'
   await d.waitFor({ timeout: 5000 });
   await snap(O.page, "04-dialog-open");
   ok(await O.page.evaluate(() => { const e = document.activeElement; return e.closest("dialog") && /Not now/.test(e.textContent); }), "focus not on Not now");
-  ok(await O.page.evaluate(() => document.querySelector("dialog").matches(":modal")), "not modal");
+  ok(await O.page.evaluate(() => document.querySelector("dialog[open]").matches(":modal")), "not modal");
   await O.page.keyboard.press("Escape");
   await O.page.getByRole("dialog").waitFor({ state: "hidden" });
   ok(await O.page.evaluate(() => /^Approve/.test(document.activeElement.textContent)), "focus not returned");
@@ -131,6 +132,42 @@ await step("10 mobile: 'More' has an accessible name and exposes expanded/collap
   const y = await snap(P.page, "10-mobile-more-open");
   ok(before === false && (await P.page.evaluate(() => document.querySelector("details.st-more").open)) === true, "toggle state");
   ok(/Settings/.test(y) && /Team/.test(y), "sheet links in tree");
+});
+await step("11 landing (P0): one main, one h1, named navigation, headings in order, the example labelled an illustration, no buttons posing as controls in it", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const pg = await ctx.newPage();
+  await pg.goto(WEB + "/", { waitUntil: "networkidle" });
+  fs.writeFileSync(path.join(DIR, "11-landing.yml"), await pg.locator("body").ariaSnapshot());
+  ok((await pg.getByRole("main").count()) === 1 && (await pg.getByRole("heading", { level: 1 }).count()) === 1, "main/h1");
+  ok((await names(pg, "navigation")).includes("On this page"), "nav name");
+  ok((await pg.getByRole("heading", { level: 2 }).count()) >= 4, "h2 sections");
+  ok(await pg.getByText("Illustration, not live data").isVisible(), "illustration label");
+  ok((await pg.locator(".lp-visual button").count()) === 0, "buttons inside the illustration");
+  ok((await pg.getByRole("contentinfo").count()) === 1 && (await pg.getByRole("banner").count()) === 1, "banner/contentinfo");
+  await ctx.close();
+});
+await step("12 first-run (P0): the checklist is an ordered list of four, exactly one step is aria-current, every state is a word, current-step actions are named", async () => {
+  const F = await openAs(browser, "fresh", { width: 1280, height: 800 }, []);
+  await F.page.goto(WEB + "/studio", { waitUntil: "networkidle" });
+  fs.writeFileSync(path.join(DIR, "12-firstrun.yml"), await F.page.locator("body").ariaSnapshot());
+  ok(await F.page.getByRole("heading", { name: "Your first result in four steps" }).isVisible(), "heading");
+  ok((await F.page.locator("ol.st-steps > li").count()) === 4 && (await F.page.locator("ol.st-steps > li[aria-current=step]").count()) === 1, "list/current");
+  ok(/next/i.test(await F.page.locator("li[aria-current=step] .st-step-state").innerText()) && (await F.page.locator(".st-step-state").count()) === 4, "state words");
+  const btn = await names(F.page, "button");
+  ok(btn.includes("Add the starter workforce"), "named action");
+  ok((await F.page.getByRole("link", { name: "Create your own agent" }).count()) >= 1, "create-agent link");
+  ok(await F.page.getByRole("group", { name: "Try an example" }).count() === 1, "examples group has a name");
+  await F.ctx.close();
+});
+await step("13 palette (P0): dialog is named, the combobox controls a listbox, the active descendant resolves to a selected option, results are announced", async () => {
+  const F = await openAs(browser, "fresh", { width: 1280, height: 800 }, []);
+  await F.page.goto(WEB + "/studio", { waitUntil: "networkidle" });
+  await F.page.keyboard.press("Control+k");
+  await F.page.getByRole("dialog", { name: "Command palette" }).waitFor();
+  fs.writeFileSync(path.join(DIR, "13-palette.yml"), await F.page.locator("dialog[open]").ariaSnapshot());
+  ok(await F.page.evaluate(() => { const c = document.querySelector("[role=combobox]"); const l = document.getElementById(c.getAttribute("aria-controls")); const a = document.getElementById(c.getAttribute("aria-activedescendant")); return l?.getAttribute("role") === "listbox" && a?.getAttribute("role") === "option" && a.getAttribute("aria-selected") === "true"; }), "combobox wiring");
+  ok(/\d+ results?/.test(await F.page.locator("dialog[open] [role=status]").innerText()), "result count announced");
+  await F.ctx.close();
 });
 await browser.close();
 const fails = results.filter((r) => !r.ok);

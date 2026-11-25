@@ -10,7 +10,9 @@ import { ThemeToggle } from "../theme-toggle";
 import { DemoBanner } from "./_home";
 import { Skeleton } from "./_ui";
 import { useInboxCount, WorkspaceSwitcher } from "./_team";
+import { CommandPalette } from "./_palette";
 import "./studio.css";
+import "./foundation.css";
 
 type NavItem = { href: string; label: string; Icon: LucideIcon; exact?: boolean };
 
@@ -121,7 +123,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
             <AuthButton />
             <div className="st-side-tools">
               <ThemeToggle />
-              <Link href="/" className="st-muted text-xs no-underline hover:underline">
+              <Link href="/classic" className="st-muted text-xs no-underline hover:underline">
                 Classic dashboard
               </Link>
             </div>
@@ -140,6 +142,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
             </div>
             <div className="st-topbar-end">
               {status === "authenticated" ? <DemoBanner /> : null}
+              {status === "authenticated" ? <CommandPalette /> : null}
               {status === "authenticated" ? (
                 <Link href="/studio#objective" className="st-btn st-btn-primary st-btn-sm st-topbar-new" aria-label="New objective">
                   <Plus size={15} aria-hidden="true" />
@@ -192,7 +195,7 @@ function Frame({ children, pathname, pending, status }: { children: ReactNode; p
             ))}
             <div className="st-more-account">
               <AuthButton />
-              <Link href="/" className="st-muted text-xs no-underline hover:underline">
+              <Link href="/classic" className="st-muted text-xs no-underline hover:underline">
                 Classic dashboard
               </Link>
             </div>

@@ -1,0 +1,239 @@
+/* AgentForge foundation (P0 of the frontend programme): the shared tokens and primitives used by the public landing page, the branded sign-in, the Studio first-run
+   experience and the command palette. It extends the Studio's ember-on-graphite tokens (studio.css `.st`) and adds nothing that fights them: no gradients as decoration,
+   no glass, no glow. Colour still means state. Everything honours prefers-reduced-motion and forced-colors. */
+
+.st {
+  --st-radius: 0.5rem;
+  --st-radius-lg: 0.75rem;
+  --st-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --st-dur: 160ms;
+  --st-measure: 62ch;
+  --st-section-gap: clamp(3.5rem, 9vw, 6.5rem);
+}
+
+/* ---------- primitives ---------- */
+.st-btn-lg {
+  min-height: 2.9rem;
+  padding: 0 1.35rem;
+  font-size: 1rem;
+  border-radius: var(--st-radius);
+}
+.st-kbd {
+  display: inline-flex;
+  align-items: center;
+  font: 500 0.7rem/1 var(--font-jetbrains-mono), ui-monospace, monospace;
+  padding: 0.18rem 0.38rem;
+  border: 1px solid var(--st-rule-2);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  color: var(--st-ink-2);
+  background: var(--st-bg-2);
+  white-space: nowrap;
+}
+.st-callout {
+  border: 1px solid var(--st-rule-2);
+  border-left: 3px solid var(--st-ember);
+  background: var(--st-bg-2);
+  border-radius: 0 var(--st-radius) var(--st-radius) 0;
+  padding: 0.85rem 1rem;
+}
+.sr-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- page headers and focus targets ---------- */
+/* the top bar's right-hand cluster fills the remaining space, so the demo banner arriving late does not resize (and shift) it */
+.st-topbar-end { flex: 1 1 auto; justify-content: flex-end; }
+.st-h1 { text-wrap: balance; }
+.lp main:focus, .si-main:focus { outline: none; }
+
+/* ---------- landing ---------- */
+.lp-wrap { width: 100%; max-width: 72rem; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2rem); }
+.lp-nav { position: sticky; top: 0; z-index: 30; background: var(--st-bg); border-bottom: 1px solid var(--st-rule); }
+.lp-nav .lp-wrap { display: flex; align-items: center; gap: 1.5rem; min-height: 3.5rem; }
+.lp-nav-links { display: flex; gap: 1.25rem; margin-left: 1rem; }
+.lp-nav-links a { color: var(--st-ink-2); text-decoration: none; font-size: 0.92rem; }
+.lp-nav-links a:hover { color: var(--st-ink); text-decoration: underline; text-underline-offset: 0.25em; }
+.lp-nav-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; }
+.lp-hero { position: relative; padding: clamp(2.5rem, 7vw, 5.5rem) 0 var(--st-section-gap); isolation: isolate; }
+/* a hairline grid that fades out: depth without decoration; purely visual and removed in forced-colors */
+.lp-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 34rem;
+  z-index: -1;
+  background-image: linear-gradient(to right, var(--st-rule) 1px, transparent 1px), linear-gradient(to bottom, var(--st-rule) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 30% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 70% 80% at 30% 0%, #000 0%, transparent 72%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.lp-hero-grid { display: grid; gap: clamp(2rem, 5vw, 3.5rem); align-items: center; }
+@media (min-width: 62rem) { .lp-hero-grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); } }
+.lp-h1 {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.25rem, 5.4vw, 3.9rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin: 0.9rem 0 0;
+  max-width: 17ch;
+  text-wrap: balance;
+}
+.lp-sub { color: var(--st-ink-2); font-size: clamp(1.02rem, 1.6vw, 1.18rem); line-height: 1.6; max-width: 54ch; margin: 1.25rem 0 0; }
+.lp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.75rem; }
+.lp-cta .st-btn-primary { min-width: 12.5rem; }
+.lp-note { margin: 0.9rem 0 0; color: var(--st-ink-3); font-size: 0.82rem; }
+.lp-visual { padding: 0; overflow: hidden; }
+.lp-visual-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.4rem 1rem; padding: 0.8rem 1rem; border-bottom: 1px solid var(--st-rule); }
+.lp-visual-body { padding: 0.25rem 1rem 1rem; display: grid; gap: 0.9rem; }
+.lp-visual-body { grid-template-columns: minmax(0, 1fr); }
+/* the example graph scales to the panel (it has a viewBox) instead of forcing the panel wider than the screen */
+.lp-visual .st-graph, .lp-visual .st-graph-scroll { min-width: 0; }
+.lp-visual .st-graph-scroll svg { width: 100%; max-width: 100%; height: auto; margin: 0; }
+.lp-visual .st-graph { margin: 0.5rem 0 0; }
+.lp-visual .st-graph-scroll { border: 0; }
+.lp-approval { border: 1px dashed var(--st-ember); border-radius: var(--st-radius); padding: 0.8rem 0.9rem; display: grid; gap: 0.5rem; background: var(--st-ember-soft); }
+.lp-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 0.9rem; margin: 0; font-size: 0.85rem; }
+.lp-kv dt { color: var(--st-ink-3); font: 500 0.7rem/1.9 var(--font-jetbrains-mono), ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.lp-kv dd { margin: 0; overflow-wrap: anywhere; }
+
+.lp-section { padding: var(--st-section-gap) 0 0; }
+.lp-section-head { max-width: 40rem; }
+.lp-h2 { font-family: var(--font-space-grotesk), system-ui, sans-serif; font-weight: 650; font-size: clamp(1.6rem, 3.4vw, 2.35rem); line-height: 1.1; letter-spacing: -0.028em; margin: 0.5rem 0 0; text-wrap: balance; }
+.lp-lede { color: var(--st-ink-2); line-height: 1.6; margin: 0.9rem 0 0; max-width: var(--st-measure); }
+.lp-how { display: grid; gap: clamp(1.5rem, 4vw, 3.5rem); }
+@media (min-width: 62rem) { .lp-how { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; } }
+.lp-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.lp-steps li { position: relative; display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: 1rem; padding-bottom: 1.75rem; }
+.lp-steps li:last-child { padding-bottom: 0; }
+.lp-steps li::before { content: ""; position: absolute; left: 1.1rem; top: 2.4rem; bottom: 0.35rem; width: 1px; background: repeating-linear-gradient(to bottom, var(--st-rule-2) 0 4px, transparent 4px 8px); }
+.lp-steps li:last-child::before { display: none; }
+.lp-node { width: 2.25rem; height: 2.25rem; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--st-rule-2); background: var(--st-bg); font: 700 0.8rem/1 var(--font-jetbrains-mono), ui-monospace, monospace; color: var(--st-ink-2); }
+.lp-step-title { font-family: var(--font-space-grotesk), system-ui, sans-serif; font-weight: 600; font-size: 1.12rem; margin: 0.35rem 0 0; }
+.lp-step-text { margin: 0.35rem 0 0; color: var(--st-ink-2); line-height: 1.6; max-width: 56ch; }
+.lp-control { list-style: none; margin: 1.75rem 0 0; padding: 0; display: grid; border-top: 1px solid var(--st-rule-2); }
+@media (min-width: 52rem) { .lp-control { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lp-control li + li { border-left: 1px solid var(--st-rule); } }
+.lp-control li { padding: 1.4rem 1.4rem 1.4rem 0; display: grid; gap: 0.5rem; align-content: start; }
+@media (min-width: 52rem) { .lp-control li + li { padding-left: 1.4rem; } }
+@media (max-width: 51.99rem) { .lp-control li + li { border-top: 1px solid var(--st-rule); } }
+.lp-control h3 { margin: 0; font-family: var(--font-space-grotesk), system-ui, sans-serif; font-size: 1.1rem; font-weight: 600; }
+.lp-control p { margin: 0; color: var(--st-ink-2); line-height: 1.6; }
+.lp-today { display: grid; gap: 1.5rem 3rem; margin-top: 1.75rem; }
+@media (min-width: 52rem) { .lp-today { grid-template-columns: 1fr 1fr; } }
+.lp-today h3 { font-family: var(--font-space-grotesk), system-ui, sans-serif; font-size: 1.05rem; margin: 0 0 0.5rem; }
+.lp-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.6rem; }
+.lp-list li { position: relative; padding-left: 1.35rem; color: var(--st-ink-2); line-height: 1.55; }
+.lp-list li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--st-good); }
+.lp-list[data-tone="todo"] li::before { background: transparent; border: 1.5px solid var(--st-ink-3); }
+.lp-final { margin-top: var(--st-section-gap); padding: clamp(1.75rem, 4vw, 2.75rem); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.25rem 2rem; }
+.lp-footer { margin-top: var(--st-section-gap); border-top: 1px solid var(--st-rule); padding: 1.5rem 0 2.5rem; color: var(--st-ink-3); font-size: 0.85rem; }
+.lp-footer .lp-wrap { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; align-items: center; justify-content: space-between; }
+.lp-footer a { color: var(--st-ink-2); }
+@media (max-width: 40rem) { .lp-nav-links { display: none; } .lp-cta .st-btn { flex: 1 1 100%; } }
+
+/* ---------- sign-in ---------- */
+.si-shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+.si-main { display: grid; place-items: center; padding: clamp(1.5rem, 6vw, 4rem) 1rem; }
+.si-card { width: 100%; max-width: 27rem; padding: clamp(1.4rem, 5vw, 2rem); display: grid; gap: 1.1rem; }
+.si-card h1 { font-family: var(--font-space-grotesk), system-ui, sans-serif; font-size: clamp(1.45rem, 5vw, 1.8rem); line-height: 1.15; letter-spacing: -0.025em; margin: 0; }
+.si-card .st-btn { width: 100%; }
+.si-points { list-style: none; margin: 0.25rem 0 0; padding: 1rem 0 0; border-top: 1px solid var(--st-rule); display: grid; gap: 0.6rem; color: var(--st-ink-2); font-size: 0.9rem; line-height: 1.5; }
+.si-points li { position: relative; padding-left: 1.35rem; }
+.si-points li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--st-ember); }
+.si-error { border: 1px solid var(--st-bad); border-left-width: 3px; border-radius: var(--st-radius); padding: 0.7rem 0.9rem; color: var(--st-ink); background: transparent; font-size: 0.92rem; }
+.si-error strong { color: var(--st-bad); }
+
+/* ---------- first run: setup checklist ---------- */
+.st-setup { border: 1px solid var(--st-rule-2); border-left: 4px solid var(--st-ember); background: var(--st-raise); box-shadow: var(--st-shadow); padding: 1.25rem clamp(1rem, 2.5vw, 1.5rem) 0.5rem; border-radius: 0 var(--st-radius) var(--st-radius) 0; }
+.st-setup-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.4rem 1rem; }
+.st-steps { list-style: none; margin: 1rem 0 0; padding: 0; }
+.st-step { position: relative; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.9rem; padding: 0 0 1.25rem; }
+.st-step:last-child { padding-bottom: 0.9rem; }
+.st-step::before { content: ""; position: absolute; left: 0.95rem; top: 2.2rem; bottom: 0.1rem; width: 1px; background: repeating-linear-gradient(to bottom, var(--st-rule-2) 0 4px, transparent 4px 8px); }
+.st-step:last-child::before { display: none; }
+.st-step-node { width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--st-rule-2); background: var(--st-bg); color: var(--st-ink-3); font: 700 0.76rem/1 var(--font-jetbrains-mono), ui-monospace, monospace; }
+.st-step[data-state="done"] .st-step-node { border-color: var(--st-good); color: var(--st-good); }
+.st-step[data-state="current"] .st-step-node { border-color: var(--st-ember); color: var(--st-ember-text); box-shadow: 0 0 0 3px var(--st-ember-soft); }
+.st-step h3 { margin: 0.25rem 0 0; font-family: var(--font-space-grotesk), system-ui, sans-serif; font-size: 1.02rem; font-weight: 600; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
+.st-step[data-state="todo"] h3 { color: var(--st-ink-3); }
+.st-step-state { font: 500 0.68rem/1 var(--font-jetbrains-mono), ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink-3); }
+.st-step[data-state="done"] .st-step-state { color: var(--st-good); }
+.st-step[data-state="current"] .st-step-state { color: var(--st-ember-text); }
+.st-step p { margin: 0.3rem 0 0; color: var(--st-ink-2); line-height: 1.55; max-width: 62ch; font-size: 0.92rem; }
+.st-step[data-state="todo"] p { color: var(--st-ink-3); }
+.st-step-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.8rem; }
+
+/* ---------- example objectives ---------- */
+.st-examples { display: grid; gap: 0.45rem; }
+.st-examples-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.75rem; }
+.st-example { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.7rem; width: 100%; text-align: left; padding: 0.6rem 0.75rem; border: 1px solid transparent; border-left: 2px solid var(--st-ember); background: var(--st-ember-soft); color: var(--st-ink); border-radius: 0 var(--st-radius) var(--st-radius) 0; font: inherit; font-size: 0.9rem; line-height: 1.45; cursor: pointer; transition: background var(--st-dur) var(--st-ease), border-color var(--st-dur) var(--st-ease); }
+.st-example:hover { border-color: var(--st-ember); }
+.st-example svg { margin-top: 0.15rem; color: var(--st-ember-text); flex: none; }
+.st-example-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.st-example-use { font: 600 0.74rem/1.6 var(--font-jetbrains-mono), ui-monospace, monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--st-ember-text); white-space: nowrap; }
+@media (max-width: 30rem) { .st-example { grid-template-columns: auto minmax(0, 1fr); } .st-example-use { display: none; } }
+
+/* ---------- command palette ---------- */
+.st-search { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.1rem; padding: 0 0.5rem 0 0.7rem; border: 1px solid var(--st-rule-2); border-radius: var(--st-radius); background: var(--st-bg-2); color: var(--st-ink-2); font: inherit; font-size: 0.85rem; cursor: pointer; transition: border-color var(--st-dur) var(--st-ease), color var(--st-dur) var(--st-ease); }
+.st-search:hover { border-color: var(--st-ember); color: var(--st-ink); }
+.st-search-text { white-space: nowrap; }
+@media (max-width: 1100px) { .st-search .st-kbd { display: none; } }
+@media (max-width: 900px) { .st-search { padding: 0 0.6rem; } .st-search-text { display: none; } }
+dialog.st-palette { position: fixed; top: min(12vh, 6rem); left: 50%; transform: translateX(-50%); margin: 0; width: min(38rem, calc(100vw - 1.5rem)); max-height: min(34rem, calc(100vh - 6rem)); padding: 0; border: 1px solid var(--st-rule-2); border-radius: var(--st-radius-lg); background: var(--st-raise); color: var(--st-ink); box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8); overflow: hidden; }
+dialog.st-palette[open] { display: flex; flex-direction: column; }
+dialog.st-palette::backdrop { background: rgba(8, 9, 12, 0.55); }
+[data-theme="light"] dialog.st-palette::backdrop { background: rgba(40, 36, 30, 0.35); }
+.st-palette-input-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--st-rule); color: var(--st-ink-3); }
+.st-palette-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--st-ink); font: inherit; font-size: 1.02rem; }
+.st-palette-input::placeholder { color: var(--st-ink-3); }
+.st-palette-input { border-radius: 0.375rem; padding: 0.3rem 0.45rem; } /* the shared focus ring (outline) is kept: it is also what forced-colors users see */
+.st-palette-list { list-style: none; margin: 0; padding: 0.4rem; overflow-y: auto; }
+.st-palette-group { padding: 0.55rem 0.7rem 0.2rem; font: 500 0.66rem/1 var(--font-jetbrains-mono), ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: var(--st-ink-3); }
+.st-palette-option { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; border-radius: var(--st-radius); border-left: 2px solid transparent; cursor: pointer; color: var(--st-ink); font-size: 0.94rem; }
+.st-palette-option svg { flex: none; color: var(--st-ink-3); }
+.st-palette-option[aria-selected="true"] { background: var(--st-ember-soft); border-left-color: var(--st-ember); }
+.st-palette-option[aria-selected="true"] svg { color: var(--st-ember-text); }
+.st-palette-hint { margin-left: auto; color: var(--st-ink-3); font-size: 0.78rem; white-space: nowrap; }
+.st-palette-empty { padding: 1.4rem 1rem; color: var(--st-ink-2); font-size: 0.92rem; }
+.st-palette-foot { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; padding: 0.55rem 1rem; border-top: 1px solid var(--st-rule); color: var(--st-ink-3); font-size: 0.76rem; }
+@media (max-width: 30rem) { .st-palette-foot { display: none; } }
+
+/* ---------- motion and contrast preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .st-example, .st-search { transition: none; }
+}
+@media (forced-colors: active) {
+  .lp-hero::before { display: none; }
+  /* the coloured dots are backgrounds, which forced colors removes: use drawn characters with different SHAPES (a check for what works, a hollow circle for a limit), so
+     meaning never depends on colour. The second declaration is the CSS "alt text" form, so assistive technology does not read the glyph aloud. */
+  .lp-list li::before, .si-points li::before { background: none; border: 0; width: auto; height: auto; top: 0; font-weight: 700; color: CanvasText; }
+  .lp-list li::before { content: "✓"; content: "✓" / ""; line-height: 1.55; }
+  .lp-list[data-tone="todo"] li::before { content: "○"; content: "○" / ""; border: 0; border-radius: 0; width: auto; height: auto; } /* this selector is more specific than the shared one above, so it must clear the ring itself */
+  .si-points li::before { content: "•"; content: "•" / ""; line-height: 1.5; }
+  .st-btn-primary, .st-btn-lg, .st-example, .st-search, .st-callout, .st-setup, .lp-approval, .si-error { border: 1px solid ButtonText; }
+  .st-step-node, .lp-node { border: 1px solid CanvasText; }
+  .st-step[data-state="current"] .st-step-node { outline: 2px solid Highlight; box-shadow: none; }
+  .st-palette-option { border-left: 0; } /* the transparent left bar would otherwise be drawn in a system colour on every option */
+  .st-palette-option[aria-selected="true"] { outline: 2px solid Highlight; background: transparent; }
+  dialog.st-palette { border: 1px solid CanvasText; }
+  .st-skip:focus { outline: 2px solid Highlight; }
+}
+
+/* ---------- mobile bottom navigation: never cover content or the control that has focus ---------- */
+@media (max-width: 860px) {
+  /* the bar is position:fixed, so the browser does not know it is there when it scrolls a focused control into view: reserve its height (plus the device's bottom inset) */
+  html:has(.st-tabbar) { scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+  .st-main { padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+  /* the pending-approvals badge sits on the tab instead of under its label, so the bar keeps one height whether or not something is waiting */
+  .st-tabbar > a { position: relative; }
+  .st-tabbar > a .st-count { position: absolute; top: 0.2rem; left: calc(50% + 0.5rem); margin: 0; min-width: 1.15rem; padding: 0 0.3rem; font-size: 0.64rem; line-height: 1.15rem; }
+}
+
+/* ---------- sign-in: a little more presence on wide screens (the narrow layout is unchanged) ---------- */
+@media (min-width: 40rem) {
+  .si-card { max-width: 30rem; padding: 2.4rem 2.5rem; gap: 1.3rem; }
+  .si-card h1 { font-size: 2.05rem; }
+  .si-card .st-btn-lg { min-height: 3.1rem; font-size: 1.05rem; }
+  .si-points { font-size: 0.95rem; }
+}

@@ -145,7 +145,7 @@ test("the layout requires a session, the proxy gates /studio and the classic das
   assert.match(layout, /useSession/);
   assert.match(layout, /status === "authenticated"/);
   assert.match(read("proxy.ts"), /"\/studio\/:path\*"/);
-  assert.match(read("app/page.tsx"), /href="\/studio"/);
+  assert.match(read("app/classic/page.tsx"), /href="\/studio"/);
   for (const href of ["/studio", "/studio/plans", "/studio/runs", "/studio/approvals", "/studio/agents", "/studio/tools", "/studio/templates"]) assert.ok(layout.includes(`"${href}"`), href);
 });
 

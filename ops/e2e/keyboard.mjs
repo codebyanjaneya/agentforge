@@ -31,7 +31,7 @@ async function walk(page, n, key = "Tab") { const seen = []; for (let i = 0; i <
 const O = await as("owner");
 await step("overview: Tab reaches the nav, New objective, the objective box and Generate plan in a sensible order; every stop shows a focus indicator and is on screen", async () => {
   await O.page.goto(WEB + "/studio", { waitUntil: "networkidle" });
-  const seen = await walk(O.page, 40);
+  const seen = await walk(O.page, 60);
   const names = seen.map((s) => s.name);
   for (const want of ["Overview", "Plans", "Runs", "Approvals", "Agents", "Tools", "Settings", "New objective"]) ok(names.some((n) => n.startsWith(want)), "never reached " + want);
   ok(seen.some((s) => s.tag === "TEXTAREA"), "objective box unreachable");
@@ -97,6 +97,43 @@ await step("approval: Approve/Reject are reachable and decidable by keyboard onl
   await O.page.keyboard.press("Space");
   await wait(async () => (await api("owner", "GET", `/approvals/${c.waiting.approval}`, null, WS)).body.status === "rejected", 15000);
 }, O.page);
+await step("command palette: Ctrl+K opens it with focus in the search field, arrows move the active option (aria-activedescendant), Enter goes, Escape closes and returns focus", async () => {
+  await O.page.goto(WEB + "/studio", { waitUntil: "networkidle" });
+  await O.page.getByRole("button", { name: "Search pages and actions" }).focus();
+  await O.page.keyboard.press("Control+k");
+  await O.page.getByRole("dialog", { name: "Command palette" }).waitFor({ timeout: 5000 });
+  ok(await O.page.evaluate(() => document.activeElement?.getAttribute("role") === "combobox"), "focus not in the combobox");
+  const first = await O.page.evaluate(() => document.activeElement.getAttribute("aria-activedescendant"));
+  await O.page.keyboard.press("ArrowDown");
+  const second = await O.page.evaluate(() => document.activeElement.getAttribute("aria-activedescendant"));
+  ok(first && second && first !== second, "ArrowDown did not move the active option");
+  ok((await O.page.locator("[role=option][aria-selected=true]").count()) === 1, "exactly one selected option");
+  await O.page.keyboard.type("plans");
+  ok((await O.page.locator("[role=option]").first().innerText()).trim().startsWith("Plans"), "filter");
+  await O.page.keyboard.press("Enter");
+  await O.page.waitForURL(/\/studio\/plans$/, { timeout: 8000 });
+  await O.page.keyboard.press("Control+k");
+  await O.page.getByRole("dialog", { name: "Command palette" }).waitFor();
+  await O.page.keyboard.press("Escape");
+  await O.page.getByRole("dialog").waitFor({ state: "hidden" });
+  ok(await O.page.evaluate(() => document.activeElement && document.activeElement !== document.body), "focus lost after Escape");
+}, O.page);
+await step("landing and sign-in: skip link is the first stop, the call to action is reachable and is a link, the sign-in button is operable", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const pg = await ctx.newPage();
+  await pg.goto(WEB + "/", { waitUntil: "networkidle" });
+  await pg.keyboard.press("Tab");
+  ok(/Skip to content/.test(await pg.evaluate(() => document.activeElement.textContent)), "landing: first stop");
+  let cta = false;
+  for (let i = 0; i < 20 && !cta; i++) { await pg.keyboard.press("Tab"); cta = await pg.evaluate(() => document.activeElement?.tagName === "A" && /Sign in with Google/.test(document.activeElement.textContent)); }
+  ok(cta, "landing: sign-in call to action unreachable");
+  await pg.keyboard.press("Enter");
+  await pg.waitForURL(/\/signin/, { timeout: 8000 });
+  let btn = false;
+  for (let i = 0; i < 12 && !btn; i++) { await pg.keyboard.press("Tab"); btn = await pg.evaluate(() => /Continue with Google/.test(document.activeElement?.textContent || "")); }
+  ok(btn, "sign-in: Continue with Google unreachable");
+  await ctx.close();
+});
 const P = await as("owner", { width: 390, height: 844 });
 await step("mobile: the More sheet opens with Enter, its links are reachable and Escape/activation close it", async () => {
   await P.page.goto(WEB + "/studio", { waitUntil: "networkidle" });

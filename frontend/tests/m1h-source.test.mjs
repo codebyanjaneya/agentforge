@@ -18,7 +18,7 @@ function walk(dir) {
 }
 
 const TOKEN_MODULES = ["lib/api-client.ts", "lib/agent-socket.ts", "lib/backend.ts", "lib/api-config.ts"];
-const PAGES = ["app/page.tsx", "app/autonomous/page.tsx", "app/history/page.tsx", "app/improve/page.tsx", "app/twin/page.tsx"];
+const PAGES = ["app/classic/page.tsx", "app/autonomous/page.tsx", "app/history/page.tsx", "app/improve/page.tsx", "app/twin/page.tsx"];
 
 test("the token and client modules never touch browser storage, cookies or logging", () => {
   for (const file of TOKEN_MODULES) {
@@ -57,7 +57,7 @@ test("pages call the backend only through the typed client and the socket client
   assert.match(read("app/autonomous/page.tsx"), /getApi\(\)\.deleteTask/);
   assert.match(read("app/improve/page.tsx"), /getApi\(\)\.analyzeAgent/);
   assert.match(read("app/history/page.tsx"), /getApi\(\)\.getHistory/);
-  assert.match(read("app/page.tsx"), /new AgentSocket\(/);
+  assert.match(read("app/classic/page.tsx"), /new AgentSocket\(/);
 });
 
 test("history uses the cursor from the response, keys entries by id and exposes 'Load more'", () => {
@@ -88,7 +88,7 @@ test("sign-out forgets the in-memory backend token", () => {
 });
 
 test("the home page only opens a socket for a signed-in session and reconnects through the socket client", () => {
-  const source = read("app/page.tsx");
+  const source = read("app/classic/page.tsx");
   assert.match(source, /if \(!signedIn\) return;/);
   assert.match(source, /socket\.stop\(\)/);
   assert.ok(!/ws\.send\(/.test(source), "no raw socket sends remain in the page");

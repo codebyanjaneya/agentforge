@@ -114,7 +114,7 @@ export default function AutonomousPage() {
           <div className="flex items-center gap-2.5">
             <ThemeToggle />
             <Link
-              href="/"
+              href="/classic"
               className="inline-flex w-fit items-center gap-2 rounded-xl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-ink/80 backdrop-blur transition-colors hover:border-accent/50 hover:text-ink"
             >
               ← Back to Agents

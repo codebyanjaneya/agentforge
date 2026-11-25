@@ -1,5 +1,6 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getApi } from "@/lib/backend";
@@ -24,6 +25,8 @@ export function ObjectiveComposer({ compact = false, examples }: { compact?: boo
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<Explained | null>(null);
   const mounted = useRef(true);
+  const field = useRef<HTMLTextAreaElement>(null);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     mounted.current = true;
@@ -40,6 +43,18 @@ export function ObjectiveComposer({ compact = false, examples }: { compact?: boo
 
   const length = text.trim().length;
   const valid = length >= 10 && length <= 2000;
+
+  /** An example fills the box, moves focus into it with the caret at the end (so it can be edited at once) and says so to assistive technology. */
+  function pickExample(example: string) {
+    setText(example);
+    setNote("Example added to the objective box. Edit it if you like, then generate the plan.");
+    requestAnimationFrame(() => {
+      const el = field.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(example.length, example.length);
+    });
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -63,6 +78,7 @@ export function ObjectiveComposer({ compact = false, examples }: { compact?: boo
         Your objective
       </label>
       <textarea
+        ref={field}
         id="objective"
         className="st-textarea"
         style={{ minHeight: compact ? "5rem" : "7rem", fontSize: "1.02rem" }}
@@ -80,14 +96,27 @@ export function ObjectiveComposer({ compact = false, examples }: { compact?: boo
         <span className="st-mono st-hint">{length}/2000</span>
       </div>
       {!busy && length === 0 ? (
-        <div className="flex flex-wrap gap-2" aria-label="Example objectives">
+        <div className="st-examples" role="group" aria-labelledby="examples-label">
+          <div className="st-examples-label">
+            <span className="st-eyebrow" id="examples-label">
+              Try an example
+            </span>
+            <span className="st-hint">Click one to fill the box, then edit it.</span>
+          </div>
           {(examples?.length ? examples : STARTERS).map((s) => (
-            <button key={s} type="button" className="st-chip cursor-pointer text-left hover:border-[var(--st-ember)]" onClick={() => setText(s)}>
-              {s}
+            <button key={s} type="button" className="st-example" onClick={() => pickExample(s)}>
+              <Sparkles size={15} aria-hidden="true" />
+              <span className="st-example-text">{s}</span>
+              <span className="st-example-use" aria-hidden="true">
+                Use
+              </span>
             </button>
           ))}
         </div>
       ) : null}
+      <div className="sr-live" role="status" aria-live="polite">
+        {note}
+      </div>
       {error ? <ErrorNotice error={error} /> : null}
       <div className="flex flex-wrap items-center gap-3">
         <button className="st-btn st-btn-primary" type="submit" disabled={!valid || busy}>

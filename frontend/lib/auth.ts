@@ -16,6 +16,8 @@ export const authOptions: NextAuthOptions = {
   // Explicit secret and lifetime (D018): the NextAuth session lasts 7 days; the API access token (10 minutes) is
   // issued separately by /api/backend-token and is never part of this session.
   secret: process.env.NEXTAUTH_SECRET,
+  // The branded sign-in page replaces NextAuth's default one (and shows its errors). Only the page changes: providers, callbacks, secret and session are untouched.
+  pages: { signIn: "/signin", error: "/signin" },
   session: { strategy: "jwt", maxAge: SESSION_MAX_AGE_SECONDS },
   callbacks: {
     signIn: ({ account, profile }) => signInCallback({ account: account as never, profile: profile as never }),

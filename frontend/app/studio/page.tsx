@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { getApi } from "@/lib/backend";
 import { nextAction } from "@/lib/studio/home";
+import { setupSteps } from "@/lib/studio/onboarding";
 import { PLAN_STATUS, relativeTime } from "@/lib/studio/view";
 import { ApprovalRow } from "./_approvals";
+import { SetupChecklist } from "./_firstrun";
 import { ObjectiveComposer } from "./_composer";
 import { ControlStrip, NextStep, StarterWorkforce, useStarterWorkforce } from "./_home";
 import { Badge, EmptyState, ErrorNotice, PageHead, Section, Skeleton, useLoader } from "./_ui";
@@ -21,6 +23,9 @@ export default function StudioHome() {
   const starter = useStarterWorkforce(() => agents.reload());
   const [justAssembled, setJustAssembled] = useState(false); // keep showing what was created (and the exact tools) until the next visit
   const ready = !!agents.data && !!plans.data && !!approvals.data && (!approvedPlan || !!runs.data);
+  // Nothing below the page title is drawn until every load has FINISHED (success or failure): content that arrives piecemeal pushes what is already on screen down
+  // (this page measured a layout shift of 0.2-0.3 when the checklist and the examples popped in). A skeleton that is replaced moves nothing.
+  const settled = !agents.loading && !plans.loading && !approvals.loading && !demo.loading && (!approvedPlan || !runs.loading);
   const newest = runs.data?.items[0];
   const action = nextAction({
     agentCount: customCount,
@@ -29,28 +34,53 @@ export default function StudioHome() {
     lastRun: approvedPlan ? (newest ? { id: newest.id, status: newest.status } : null) : undefined,
   });
 
-  function here() {
-    if (action.kind === "assemble") {
-      setJustAssembled(true);
-      void starter.add();
-      return;
-    }
+  const setup = ready ? setupSteps({ agentCount: customCount, plans: plans.data!.items, lastRun: newest ? { id: newest.id, status: newest.status } : null }) : null;
+  const draftPlan = plans.data?.items.find((x) => x.status === "draft");
+  const planHref = draftPlan ? `/studio/plans/${draftPlan.id}` : approvedPlan ? `/studio/plans/${approvedPlan.id}` : null;
+  const runHref = newest ? `/studio/runs/${newest.id}` : null;
+
+  function assemble() {
+    setJustAssembled(true);
+    void starter.add();
+  }
+  function focusObjective() {
     const target = document.getElementById("objective");
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (target instanceof HTMLElement) target.focus();
   }
+  function here() {
+    if (action.kind === "assemble") return assemble();
+    focusObjective();
+  }
+
+  const head = (
+    <PageHead
+      eyebrow="AgentForge Studio"
+      title="A workforce you can hand real work to."
+      lede="Specialist agents plan the work, use real tools to do it, and stop to ask you before anything sensitive. You approve the plan, then every exact action, and you can read everything that happened."
+    />
+  );
+  if (!settled) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        {head}
+        <div className="mt-6" style={{ minHeight: "28rem" }}>
+          <Skeleton lines={4} height="5rem" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHead
-        eyebrow="AgentForge Studio"
-        title="A workforce you can hand real work to."
-        lede="Specialist agents plan the work, use real tools to do it, and stop to ask you before anything sensitive. You approve the plan, then every exact action, and you can read everything that happened."
-      />
+      {head}
 
-      {ready ? (
-        <div className="mt-6">
-          <NextStep action={action} onHere={here} busy={starter.busy} />
+      {ready && setup ? (
+        <div className="mt-6 grid gap-4">
+          {action.kind === "approve" || setup.complete ? <NextStep action={action} onHere={here} busy={starter.busy} /> : null}
+          {!setup.complete ? (
+            <SetupChecklist steps={setup.steps} done={setup.done} onAssemble={assemble} assembling={starter.busy} onWrite={focusObjective} planHref={planHref} runHref={runHref} />
+          ) : null}
         </div>
       ) : null}
 
@@ -101,7 +131,7 @@ export default function StudioHome() {
             ) : agents.error ? (
               <ErrorNotice error={agents.error} onRetry={agents.reload} />
             ) : customCount === 0 || justAssembled ? (
-              <StarterWorkforce state={{ ...starter, add: () => { setJustAssembled(true); return starter.add(); } }} />
+              <StarterWorkforce compact={!!setup && !setup.complete} state={{ ...starter, add: () => { setJustAssembled(true); return starter.add(); } }} />
             ) : (
               <div>
                 {agents.data!.items.slice(0, 6).map((a) => (

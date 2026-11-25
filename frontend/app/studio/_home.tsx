@@ -97,7 +97,7 @@ export function useStarterWorkforce(onCreated: () => void) {
 }
 
 /** What the starter workforce is, and (once created) the exact tools each specialist may use, as the backend returned them. */
-export function StarterWorkforce({ state }: { state: ReturnType<typeof useStarterWorkforce> }) {
+export function StarterWorkforce({ state, compact = false }: { state: ReturnType<typeof useStarterWorkforce>; compact?: boolean }) {
   const { busy, error, made, add } = state;
   const templates = useLoader(() => getApi().listTemplates(), []);
   const names = ["unit-economics-analyst", "launch-planner", "launch-comms"];
@@ -105,8 +105,9 @@ export function StarterWorkforce({ state }: { state: ReturnType<typeof useStarte
 
   return (
     <div className="st-starter" id="starter">
-      <p className="st-muted m-0 text-sm leading-relaxed">
-        An AI workforce is a set of specialist agents, each with its own instructions and the tools it is allowed to use. You describe an objective; the planner assigns the work and you approve the plan.
+      {compact ? <div className="st-eyebrow">What the starter workforce includes</div> : null}
+      <p className="st-muted m-0 text-sm leading-relaxed" hidden={compact}>
+        An agent is a specialist: written instructions, the tools it is allowed to use, and a model. A workforce is a set of them. You describe an objective, the planner assigns the work, and you approve the plan. These three are ready to use; you can also create your own.
       </p>
       <ol className="st-starter-list">
         {(made ?? shown.map((t) => ({ slug: t.id, name: t.name, role: t.role, tools: [], created: false }))).map((a) => (
@@ -126,11 +127,16 @@ export function StarterWorkforce({ state }: { state: ReturnType<typeof useStarte
         ))}
       </ol>
       {error ? <ErrorNotice error={error} /> : null}
-      {made ? null : (
-        <button type="button" className="st-btn st-btn-primary" onClick={() => void add()} disabled={busy || !shown.length}>
-          {busy ? <Spinner /> : null}
-          {busy ? "Adding…" : "Add the starter workforce"}
-        </button>
+      {made || compact ? null : (
+        <div className="st-step-actions" style={{ marginTop: 0 }}>
+          <button type="button" className="st-btn st-btn-primary" onClick={() => void add()} disabled={busy || !shown.length}>
+            {busy ? <Spinner /> : null}
+            {busy ? "Adding…" : "Add the starter workforce"}
+          </button>
+          <Link href="/studio/agents/new" className="st-btn">
+            Create your own agent
+          </Link>
+        </div>
       )}
     </div>
   );

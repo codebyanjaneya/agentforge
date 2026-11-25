@@ -131,7 +131,7 @@ export default function DigitalTwin() {
             <p className="mt-1 text-gray-400">Live Startup Simulation</p>
           </div>
           <Link
-            href="/"
+            href="/classic"
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800"
           >
             ← Back to Agents
